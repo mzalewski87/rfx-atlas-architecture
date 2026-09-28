@@ -1,0 +1,54 @@
+/* RFx Atlas additions on top of the shared viewer stylesheet (styles.css). */
+
+/* Zones */
+.zone-box { fill: rgba(15, 23, 42, 0.45); stroke: #334155; stroke-width: 1.5; }
+.zone-box.zone-gcp { fill: rgba(66, 133, 244, 0.035); stroke: rgba(66, 133, 244, 0.55); stroke-width: 2; }
+.zone-box.zone-vpc { fill: rgba(30, 41, 59, 0.35); stroke: #475569; }
+.zone-box.zone-gke { fill: rgba(50, 108, 229, 0.06); stroke: rgba(50, 108, 229, 0.6); }
+.zone-box.zone-psa { fill: rgba(37, 99, 235, 0.05); stroke: rgba(56, 189, 248, 0.45); stroke-dasharray: 6 5; }
+.zone-box.zone-managed { fill: rgba(168, 85, 247, 0.04); stroke: rgba(168, 85, 247, 0.45); }
+.zone-box.zone-external { fill: rgba(250, 88, 45, 0.035); stroke: rgba(250, 88, 45, 0.45); stroke-dasharray: 6 5; }
+.zone-title { font-size: 13px; font-weight: 700; fill: #E2E8F0; }
+.zone-sub { font-size: 10px; font-family: var(--font-mono); fill: #94A3B8; }
+
+/* Node text and badges */
+.node-badge.info-bg { fill: #334155; }
+.node-badge.warn-bg { fill: #B45309; }
+.node-badge-text { font-size: 8.5px; font-weight: 700; fill: #fff; }
+
+/* Scenario states */
+.arch-node.acting { filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.95)); }
+.arch-node.acting .node-card { stroke: var(--status-action); stroke-width: 2; }
+.arch-node.failing .node-card { stroke: var(--status-failure); stroke-width: 2.5; }
+.arch-node.restored { filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.9)); }
+.arch-node.restored .node-card { stroke: var(--status-active); stroke-width: 2; }
+
+/* Link types */
+.arch-link { stroke-width: 1.6; opacity: 0.8; }
+.arch-link.link-control { stroke: #38BDF8; }
+.arch-link.link-data { stroke: #64748B; }
+.arch-link.link-ai { stroke: #FA582D; stroke-dasharray: 5 4; }
+.arch-link.link-secret { stroke: #A855F7; stroke-dasharray: 2 4; }
+.arch-link.link-egress { stroke: #22C55E; stroke-dasharray: 6 4; }
+.arch-link.link-deploy { stroke: #94A3B8; stroke-dasharray: 8 5; }
+.arch-link.flow-active { opacity: 1; stroke-width: 3.2; stroke-dasharray: none; }
+
+/* Left panel content */
+.panel-intro { font-size: 12px; line-height: 1.55; color: var(--text-muted); margin-bottom: 14px; }
+.panel-hint { font-size: 11px; line-height: 1.5; color: var(--text-dim); margin-top: 12px; }
+.legend { display: grid; gap: 7px; font-size: 11px; color: var(--text-muted); }
+.legend div { display: flex; align-items: center; gap: 8px; }
+.legend-line { display: inline-block; width: 26px; height: 0; border-top: 2px solid #64748B; }
+.legend-line.link-control { border-color: #38BDF8; }
+.legend-line.link-data { border-color: #64748B; }
+.legend-line.link-ai { border-top-style: dashed; border-color: #FA582D; }
+.legend-line.link-secret { border-top-style: dotted; border-color: #A855F7; }
+.legend-line.link-egress { border-top-style: dashed; border-color: #22C55E; }
+.legend-line.link-deploy { border-top-style: dashed; border-color: #94A3B8; }
+.flow-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.slide-index { list-style: none; padding-left: 0; font-size: 12px; line-height: 1.9; }
+.slide-index a { color: var(--text-muted); text-decoration: none; }
+.slide-index a:hover { color: var(--panw-orange); }
+
+#flow-narration-placeholder .narration-box,
+#scenario-narration-placeholder .narration-box { margin: 0 0 14px 0; }

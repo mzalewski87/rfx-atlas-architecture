@@ -1,0 +1,75 @@
+###############################################################################
+# Publish the interactive architecture viewer to GitHub Pages.
+#
+# The viewer is a zero-dependency static app (no build step), so this uploads
+# viewer/ as-is. Publishing from main means the page cannot drift from the repo.
+#
+# Result: https://<owner>.github.io/<repo>/ serves viewer/index.html.
+###############################################################################
+name: Deploy viewer to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'viewer/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sanity-check the viewer bundle
+        run: |
+          set -euo pipefail
+          test -f viewer/index.html || { echo "viewer/index.html missing"; exit 1; }
+          missing=0
+          while read -r asset; do
+            [ -f "viewer/$asset" ] || { echo "missing asset: viewer/$asset"; missing=1; }
+          done < <(grep -oE '(src|href)="[^"]+"' viewer/index.html \
+                     | sed -E 's/^(src|href)="//; s/"$//' \
+                     | grep -vE '^(https?:|data:|#|mailto:)')
+          [ "$missing" -eq 0 ] || exit 1
+          # Every node referenced by a link, flow or scenario must exist in the data model.
+          node - <<'JS'
+          const fs = require("fs");
+          const src = fs.readFileSync("viewer/js/data.js", "utf8");
+          const ARCHITECTURE_DATA = new Function(src + "; return ARCHITECTURE_DATA;")();
+          const ids = new Set(ARCHITECTURE_DATA.nodes.map((n) => n.id));
+          const zones = new Set(ARCHITECTURE_DATA.zones.map((z) => z.id));
+          const bad = [];
+          ARCHITECTURE_DATA.links.forEach((l) => [l.from, l.to].forEach((id) => ids.has(id) || bad.push(`link ${id}`)));
+          ARCHITECTURE_DATA.trafficFlows.forEach((f) => f.steps.forEach((s) => s.nodes.forEach((id) => ids.has(id) || bad.push(`${f.id} ${id}`))));
+          ARCHITECTURE_DATA.scenarios.forEach((c) => c.steps.forEach((s) => s.affectedNodes.forEach((id) => ids.has(id) || bad.push(`${c.id} ${id}`))));
+          ARCHITECTURE_DATA.nodes.forEach((n) => ARCHITECTURE_DATA.components[n.id] || bad.push(`component ${n.id}`));
+          ARCHITECTURE_DATA.presets.concat(ARCHITECTURE_DATA.presentationSlides).forEach((p) => {
+            const f = p.focus; if (f && f !== "global" && !ids.has(f) && !zones.has(f)) bad.push(`focus ${f}`);
+          });
+          if (bad.length) { console.error("dangling references:\n" + bad.join("\n")); process.exit(1); }
+          console.log("data model OK");
+          JS
+          echo "viewer bundle OK"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: viewer
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
