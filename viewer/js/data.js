@@ -248,7 +248,8 @@ const ARCHITECTURE_DATA = {
     queue: {
       name: "Job queue + event log", category: "Data", icon: "queue",
       summary: "Jobs are rows claimed with SELECT … FOR UPDATE SKIP LOCKED; running jobs send heartbeats. Every state change is an event row, streamed to browsers over SSE with Last-Event-ID resume.",
-      details: { "Retries": "up to 3 attempts", "Lost jobs": "no heartbeat for 15 min → job.lost, requeued while attempts remain", "SSE filtering": "per user: only events of cases they may see" }
+      details: { "Retries": "up to 3 attempts",
+        "Deferral": "not_before: a job waiting for a knowledge refresh is re-checked every 20 s without holding a worker", "Lost jobs": "no heartbeat for 15 min → job.lost, requeued while attempts remain", "SSE filtering": "per user: only events of cases they may see" }
     },
     backups: {
       name: "Database backups", category: "Data", icon: "sql",
@@ -314,6 +315,7 @@ const ARCHITECTURE_DATA = {
       id: "flow-eval", name: "3. Judge and evaluation", color: "#FA582D",
       description: "Retrieval-grounded grading with escalation and a policy layer that can only lower a verdict.",
       steps: [
+        { title: "Knowledge state", text: "Before the judge or any evaluation the UI shows the index date and an estimated refresh time. Refreshing queues the chosen syncs; the analysis job defers itself in the queue (not_before) until the syncs and the index build finish, then loads the new index. Or the user proceeds with the current state.", nodes: ["browser", "api", "queue", "sync", "index-cache"] },
         { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
         { title: "Retrieve", text: "For each requirement: confirmed memory (tier M), in-scope passages, labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets.", nodes: ["worker", "index-cache", "sql"] },
         { title: "Grade", text: "Claude Sonnet returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side).", nodes: ["worker", "claude"] },
