@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-09-29"
+    lastReviewed: "2026-09-30"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -309,6 +309,7 @@ const ARCHITECTURE_DATA = {
         { title: "Authenticated tunnel", text: "kubectl port-forward opens a tunnel through the GKE DNS endpoint; Google IAM authorises the engineer's identity.", nodes: ["browser", "tunnel", "control-plane"] },
         { title: "Gateway", text: "The tunnel lands on the gateway Service. nginx serves the UI and proxies /api on the same origin.", nodes: ["control-plane", "gateway"] },
         { title: "Sign-in", text: "The API verifies the Argon2 password hash and creates a server-side session; the browser gets an HTTP-only SameSite=Strict cookie.", nodes: ["gateway", "api", "sql"] },
+        { title: "Clone", text: "Language, data residency and anonymisation are fixed for a case; a clone copies its files and redaction terms into a new case with new settings and reads the files again.", nodes: ["browser", "api", "gcs", "queue"] },
         { title: "Only my cases", text: "Case lists, jobs and the event stream are filtered to the cases the user created or was invited to (administrators: all, read-only).", nodes: ["api", "queue", "browser"] }
       ]
     },
@@ -319,6 +320,7 @@ const ARCHITECTURE_DATA = {
         { title: "Upload", text: "The browser uploads XLSX/DOCX/PDF/TXT/MD/JPEG/TIFF (≤200 MB). The API stores the original in Cloud Storage and queues file.inspect.", nodes: ["browser", "gateway", "api", "gcs"] },
         { title: "Queue", text: "The job row is claimed by the worker with SKIP LOCKED; progress events stream back to the browser.", nodes: ["api", "queue", "worker"] },
         { title: "Extract and OCR", text: "Text is extracted with anchors (sheet/row, paragraph, page). Scanned pages are rendered and transcribed by Gemini in europe-west4.", nodes: ["worker", "gcs", "gemini"] },
+        { title: "Anonymisation review", text: "For a case created with the anonymisation review (a setting fixed at creation, like the languages and EU residency), a local scan — no model — proposes people, organisations, contact data, addresses and checksum-validated identifiers. Processing waits until the engineer ticks what to redact; from then on every model call of the case masks those terms.", nodes: ["worker", "sql", "browser"] },
         { title: "Classify the file", text: "worker-interactive tags each file with its content (offer description, functional / organisational / legal / additional requirements, other). A file with nothing technical only gets a suggestion to exclude its requirements — the engineer decides. Every format can be previewed.", nodes: ["worker-interactive", "claude", "sql"] },
         { title: "Redact, then segment", text: "Redaction terms are masked, then Claude splits blocks into atomic requirements with English working text; block references keep the anchors. EU-resident cases use Gemini in europe-west4 instead.", nodes: ["worker", "claude", "gemini"] },
         { title: "Ready", text: "Requirements are stored; case.state events refresh the case view live.", nodes: ["worker", "sql", "queue", "browser"] }
@@ -332,7 +334,7 @@ const ARCHITECTURE_DATA = {
         { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements — on Sonnet, or on Opus 5.5 when the engineer ticks the stronger model. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
         { title: "Retrieve", text: "For each requirement: confirmed memory (tier M), in-scope passages, labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets.", nodes: ["worker", "index-cache", "sql"] },
         { title: "Grade", text: "Claude Sonnet returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side).", nodes: ["worker", "claude"] },
-        { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5.", nodes: ["worker", "claude"] },
+        { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5. PARTIAL answers are split into what is met and what is not; NEEDS VERIFICATION into what is certain and what must be verified.", nodes: ["worker", "claude"] },
         { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
         { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
         { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment.", nodes: ["queue", "api", "browser"] }
