@@ -61,7 +61,7 @@ class AppController {
     if (this.mode === "overview") {
       title.textContent = "Architecture overview";
       body.innerHTML = `
-        <p class="panel-intro">RFx Atlas runs in one Google Cloud project: four workloads on private GKE Autopilot nodes,
+        <p class="panel-intro">RFx Atlas runs in one Google Cloud project: five workloads on private GKE Autopilot nodes,
         a private Cloud SQL database that doubles as job queue and event log, Cloud Storage, Secret Manager and
         Vertex AI models. There is no public endpoint.</p>
         <div class="legend">

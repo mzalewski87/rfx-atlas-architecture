@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-09-28"
+    lastReviewed: "2026-09-29"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -58,12 +58,13 @@ const ARCHITECTURE_DATA = {
 
     { id: "gateway", x: 90, y: 455, w: 220, h: 64, icon: "nginx", title: "gateway", sub: "nginx · UI + /api proxy", badge: "×1" },
     { id: "api", x: 330, y: 455, w: 220, h: 64, icon: "api", title: "api", sub: "FastAPI · REST · SSE", badge: "×1" },
-    { id: "worker", x: 570, y: 455, w: 250, h: 64, icon: "worker", title: "worker", sub: "pipeline · chat · index", badge: "×1" },
+    { id: "worker", x: 570, y: 455, w: 250, h: 64, icon: "worker", title: "worker", sub: "analysis · OCR · translation · index", badge: "×2" },
     { id: "netpol", x: 90, y: 575, w: 220, h: 64, icon: "shield", title: "NetworkPolicy", sub: "default-deny · gateway→api" },
     { id: "init", x: 330, y: 575, w: 220, h: 64, icon: "job", title: "init job", sub: "migrations · first admin" },
     { id: "sync", x: 570, y: 575, w: 250, h: 64, icon: "sync", title: "sync", sub: "doc sync · headless browser", badge: "×2" },
     { id: "k8s-secrets", x: 90, y: 700, w: 220, h: 64, icon: "key", title: "Kubernetes Secrets", sub: "DB URL · admin password" },
-    { id: "index-cache", x: 330, y: 700, w: 490, h: 64, icon: "index", title: "BM25 index (in memory, per pod)", sub: "snapshot from Cloud Storage · reloads on publish" },
+    { id: "index-cache", x: 330, y: 700, w: 220, h: 64, icon: "index", title: "BM25 index", sub: "in memory · hot reload" },
+    { id: "worker-interactive", x: 570, y: 700, w: 250, h: 64, icon: "worker", title: "worker-interactive", sub: "renders · chat · file intake", badge: "×2" },
 
     { id: "nat", x: 870, y: 455, w: 220, h: 64, icon: "nat", title: "Cloud Router + NAT", sub: "egress for private nodes" },
 
@@ -75,8 +76,8 @@ const ARCHITECTURE_DATA = {
     { id: "secrets", x: 1420, y: 410, w: 250, h: 72, icon: "secret", title: "Secret Manager", sub: "DB · admin · Koi (write-only)" },
     { id: "registry", x: 1150, y: 520, w: 250, h: 72, icon: "registry", title: "Artifact Registry", sub: "app · gateway · sync images" },
     { id: "wi", x: 1420, y: 520, w: 250, h: 72, icon: "iam", title: "Workload Identity", sub: "SA per workload · no keys" },
-    { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "OCR · europe-west4", badge: "EU" },
-    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet · Opus · global", badge: "GLOBAL", badgeClass: "warn-bg" }
+    { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "OCR · EU-resident cases", badge: "EU" },
+    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" }
   ],
 
   // ------------------------------------------------------------------ links ---
@@ -97,6 +98,11 @@ const ARCHITECTURE_DATA = {
     { from: "worker", to: "index-cache", cls: "data" },
     { from: "worker", to: "gemini", cls: "ai" },
     { from: "worker", to: "claude", cls: "ai" },
+    { from: "worker-interactive", to: "queue", cls: "data" },
+    { from: "worker-interactive", to: "gcs", cls: "data" },
+    { from: "worker-interactive", to: "index-cache", cls: "data" },
+    { from: "worker-interactive", to: "claude", cls: "ai" },
+    { from: "worker-interactive", to: "gemini", cls: "ai" },
     { from: "api", to: "secrets", cls: "secret" },
     { from: "sync", to: "secrets", cls: "secret" },
     { from: "sync", to: "nat", cls: "egress" },
@@ -107,6 +113,7 @@ const ARCHITECTURE_DATA = {
     { from: "registry", to: "worker", cls: "deploy" },
     { from: "k8s-secrets", to: "api", cls: "secret" },
     { from: "wi", to: "worker", cls: "secret" },
+    { from: "wi", to: "worker-interactive", cls: "secret" },
     { from: "sql", to: "backups", cls: "data" }
   ],
 
@@ -207,8 +214,13 @@ const ARCHITECTURE_DATA = {
     },
     worker: {
       name: "worker", category: "Workload", icon: "worker",
-      summary: "Claims jobs from the PostgreSQL queue: ingest, OCR, segmentation, judge, evaluation, outputs, assistant turns, product-document ingest, model discovery and search-index builds. The only workload (with sync) allowed to call Vertex AI.",
-      details: { "Replicas": "1 (scales horizontally)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "sync scheduler + orphaned-job reaper" }
+      summary: "Claims every job kind except documentation sync from the PostgreSQL queue: OCR, segmentation, judge, evaluation, translation of generated text and search-index builds (and short jobs when idle). With worker-interactive and sync, the only workloads allowed to call Vertex AI.",
+      details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "sync scheduler + orphaned-job reaper" }
+    },
+    "worker-interactive": {
+      name: "worker-interactive", category: "Workload", icon: "worker",
+      summary: "The same runner and identity as worker, limited to the short jobs a person waits for (RFX_WORKER_POOL=interactive): document renders and write-back, assistant turns, file intake and content classification, price-list parsing, product-document ingest, model discovery. They never queue behind a long judge or evaluation run.",
+      details: { "Replicas": "2", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-worker (Vertex AI)", "Kinds": "queue.INTERACTIVE_KINDS", "Queue positions": "the Activity panel shows how many jobs of the same pool wait ahead" }
     },
     netpol: {
       name: "NetworkPolicy", category: "Kubernetes security", icon: "shield",
@@ -278,13 +290,13 @@ const ARCHITECTURE_DATA = {
     },
     gemini: {
       name: "Vertex AI — Gemini", category: "Models", icon: "gemini",
-      summary: "OCR of scanned pages (verbatim transcription in the source language), in the EU region.",
-      details: { "Default": "gemini-2.5-flash", "Escalation": "gemini-2.5-pro (illegible or truncated pages)", "Region": "europe-west4" }
+      summary: "OCR of scanned pages (verbatim transcription in the source language), in the EU region — and every model task of an EU-resident case: routes whose endpoint is outside the EU switch automatically to Gemini here, including the assistant's tool loop.",
+      details: { "OCR": "gemini-2.5-flash → gemini-2.5-pro (illegible or truncated pages)", "EU-resident cases": "gemini-2.5-pro (segmentation, judge, evaluation, assistant), gemini-2.5-flash (translation)", "Region": "europe-west4", "Gemma": "not offered as a managed Vertex AI endpoint" }
     },
     claude: {
       name: "Vertex AI — Claude", category: "Models", icon: "claude",
-      summary: "Segmentation, translation, judge, evaluation and the assistant. Runs on the global endpoint until EU quota is available — requests may be processed outside the EU. Routing is a setting, switchable without a release.",
-      details: { "Default": "claude-sonnet-5", "Escalation": "claude-opus-5 (uncertain verdicts, deep mode)", "Discovery": "models.discover probes every model per region", "Logged": "every call in llm_calls (tokens, latency, case)" }
+      summary: "Segmentation, translation, judge, evaluation and the assistant for cases without the EU-residency flag. Runs on the global endpoint until EU quota is available — requests may be processed outside the EU. Routing is a setting, switchable without a release.",
+      details: { "Default": "claude-sonnet-5", "Escalation": "claude-opus-5-5 (uncertain verdicts, deep evaluation, deep judge)", "Discovery": "models.discover probes every model per region", "Logged": "every call in llm_calls (tokens, latency, case)" }
     }
   },
 
@@ -307,7 +319,8 @@ const ARCHITECTURE_DATA = {
         { title: "Upload", text: "The browser uploads XLSX/DOCX/PDF/TXT/MD/JPEG/TIFF (≤200 MB). The API stores the original in Cloud Storage and queues file.inspect.", nodes: ["browser", "gateway", "api", "gcs"] },
         { title: "Queue", text: "The job row is claimed by the worker with SKIP LOCKED; progress events stream back to the browser.", nodes: ["api", "queue", "worker"] },
         { title: "Extract and OCR", text: "Text is extracted with anchors (sheet/row, paragraph, page). Scanned pages are rendered and transcribed by Gemini in europe-west4.", nodes: ["worker", "gcs", "gemini"] },
-        { title: "Redact, then segment", text: "Redaction terms are masked, then Claude splits blocks into atomic requirements with English working text; block references keep the anchors.", nodes: ["worker", "claude"] },
+        { title: "Classify the file", text: "worker-interactive tags each file with its content (offer description, functional / organisational / legal / additional requirements, other). A file with nothing technical only gets a suggestion to exclude its requirements — the engineer decides. Every format can be previewed.", nodes: ["worker-interactive", "claude", "sql"] },
+        { title: "Redact, then segment", text: "Redaction terms are masked, then Claude splits blocks into atomic requirements with English working text; block references keep the anchors. EU-resident cases use Gemini in europe-west4 instead.", nodes: ["worker", "claude", "gemini"] },
         { title: "Ready", text: "Requirements are stored; case.state events refresh the case view live.", nodes: ["worker", "sql", "queue", "browser"] }
       ]
     },
@@ -316,11 +329,12 @@ const ARCHITECTURE_DATA = {
       description: "Retrieval-grounded grading with escalation and a policy layer that can only lower a verdict.",
       steps: [
         { title: "Knowledge state", text: "Before the judge or any evaluation the UI shows the index date and an estimated refresh time. Refreshing queues the chosen syncs; the analysis job defers itself in the queue (not_before) until the syncs and the index build finish, then loads the new index. Or the user proceeds with the current state.", nodes: ["browser", "api", "queue", "sync", "index-cache"] },
-        { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
+        { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements — on Sonnet, or on Opus 5.5 when the engineer ticks the stronger model. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
         { title: "Retrieve", text: "For each requirement: confirmed memory (tier M), in-scope passages, labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets.", nodes: ["worker", "index-cache", "sql"] },
         { title: "Grade", text: "Claude Sonnet returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side).", nodes: ["worker", "claude"] },
-        { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus.", nodes: ["worker", "claude"] },
+        { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5.", nodes: ["worker", "claude"] },
         { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
+        { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
         { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment.", nodes: ["queue", "api", "browser"] }
       ]
     },
@@ -329,17 +343,17 @@ const ARCHITECTURE_DATA = {
       description: "Compliance matrix, summary, BOM, or the answers written into the customer's own file.",
       steps: [
         { title: "Request", text: "The browser requests an output (read access suffices); the API queues output.render.", nodes: ["browser", "api", "queue"] },
-        { title: "Render", text: "The worker reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy, PDF annotated; BOM maps to an optional SKU price list.", nodes: ["worker", "sql", "gcs"] },
+        { title: "Render", text: "worker-interactive reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy (with Engineer notes and Documentation columns), PDF annotated; stored translations are reused; BOM maps to an optional SKU price list.", nodes: ["worker-interactive", "sql", "gcs"] },
         { title: "Download", text: "output.ready event; the file is downloaded through the API with its server-side name.", nodes: ["gcs", "api", "gateway", "browser"] }
       ]
     },
     {
       id: "flow-chat", name: "5. Assistant turn", color: "#F59E0B",
-      description: "A tool-using Claude loop that runs in the worker; the API only relays the stream.",
+      description: "A tool-using model loop that runs in worker-interactive; the API only relays the stream.",
       steps: [
         { title: "Message", text: "POST to the chat session (general or per case; access to the case is checked). The API queues chat.turn and keeps the response open as a stream.", nodes: ["browser", "api", "queue"] },
-        { title: "Tool loop", text: "The worker runs Claude with tools: search_knowledge (hardware-aware), case_overview, requirement_verdict, propose_memory, propose_override.", nodes: ["worker", "claude", "index-cache", "sql"] },
-        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval.", nodes: ["worker", "queue", "api", "browser"] }
+        { title: "Tool loop", text: "worker-interactive runs Claude (Gemini function calling for EU-resident cases) with tools: search_knowledge (hardware-aware), case_overview, requirement_verdict, propose_memory, propose_override.", nodes: ["worker-interactive", "claude", "gemini", "index-cache", "sql"] },
+        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval.", nodes: ["worker-interactive", "queue", "api", "browser"] }
       ]
     },
     {
@@ -376,6 +390,16 @@ const ARCHITECTURE_DATA = {
 
   // -------------------------------------------------------------- scenarios ---
   scenarios: [
+    {
+      id: "scn-busy", tag: "Load", name: "Several consultants at once",
+      description: "Two evaluations run while other consultants render documents and ask the assistant.",
+      steps: [
+        { phase: "Analyses running", status: "normal", message: "Both worker replicas grade one evaluation each (4 requirements in parallel per replica).", affectedNodes: ["worker", "claude"] },
+        { phase: "Short jobs arrive", status: "action", message: "A write-back render and an assistant turn are queued; worker-interactive claims them at once instead of waiting behind the analyses.", affectedNodes: ["worker-interactive", "queue"] },
+        { phase: "Backlog visible", status: "failure", message: "A third evaluation waits; the Activity panel shows its position in the analysis queue.", affectedNodes: ["queue", "browser"] },
+        { phase: "Drains", status: "restored", message: "The next free worker claims it. If waits become routine, raise the worker replicas (queue-depth autoscaling is the next step).", affectedNodes: ["worker"] }
+      ]
+    },
     {
       id: "scn-worker-restart", tag: "Rolling deploy", name: "Worker restarted mid-evaluation",
       description: "A deploy or node upgrade sends SIGTERM to the worker while an evaluation is running.",
@@ -450,15 +474,15 @@ const ARCHITECTURE_DATA = {
       <div class="callout-box"><strong>Every verdict is a proposal.</strong> The platform shows its evidence — cited passages with the decisive phrases highlighted — so an engineer can check it quickly.</div>` },
     { title: "2. No public endpoint", focus: "tunnel", zoom: 1.35, content: `
       <p>There is no Ingress, load balancer or public IP. Engineers reach the UI with <code>kubectl port-forward</code> through the GKE <strong>DNS endpoint</strong>, authorised by Google IAM. Nodes are private; Cloud SQL has a private IP only.</p>` },
-    { title: "3. Four workloads, one queue", focus: "zone-gke", zoom: 1.25, content: `
-      <ul><li><strong>gateway</strong> — UI and /api proxy (same origin).</li><li><strong>api</strong> — REST, event stream, access control; no model permission.</li><li><strong>worker</strong> — the pipeline, assistant turns, index builds.</li><li><strong>sync</strong> ×2 — documentation mirroring.</li></ul>
+    { title: "3. Five workloads, one queue", focus: "zone-gke", zoom: 1.25, content: `
+      <ul><li><strong>gateway</strong> — UI and /api proxy (same origin).</li><li><strong>api</strong> — REST, event stream, access control; no model permission.</li><li><strong>worker</strong> ×2 — the analysis pipeline, translation, index builds.</li><li><strong>worker-interactive</strong> ×2 — document renders, assistant turns, file intake, so they never wait behind an analysis.</li><li><strong>sync</strong> ×2 — documentation mirroring.</li></ul>
       <p>They coordinate through a PostgreSQL job queue (SKIP LOCKED, heartbeats) and an event log streamed to browsers.</p>` },
     { title: "4. Least privilege", focus: "wi", zoom: 1.35, content: `
-      <p>One service account per workload via Workload Identity — no keys. Only worker and sync may call Vertex AI. Koi credentials are write-only through the API and readable only by sync. Inside the namespace, a default-deny NetworkPolicy lets only the gateway reach the API.</p>` },
+      <p>One service account per workload via Workload Identity — no keys. Only the workers (worker, worker-interactive) and sync may call Vertex AI. Koi credentials are write-only through the API and readable only by sync. Inside the namespace, a default-deny NetworkPolicy lets only the gateway reach the API.</p>` },
     { title: "5. Grounded grading", focus: "index-cache", zoom: 1.3, content: `
-      <p>Each requirement is graded against passages retrieved from ~40k synced documents (BM25), confirmed institutional memory and, for named hardware models, that family's Hardware Reference and datasheets. Claude Sonnet grades; Opus re-checks uncertain verdicts; a deterministic policy layer can only lower a verdict.</p>` },
+      <p>Each requirement is graded against passages retrieved from ~40k synced documents (BM25), confirmed institutional memory and, for named hardware models, that family's Hardware Reference and datasheets. Claude Sonnet grades; Opus 5.5 re-checks uncertain verdicts; a deterministic policy layer can only lower a verdict.</p>` },
     { title: "6. Models and data residency", focus: "claude", zoom: 1.35, content: `
-      <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
+      <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. A case flagged <strong>EU data residency</strong> switches automatically: every task whose model runs outside the EU uses Gemini 2.5 in europe-west4 instead. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
     { title: "7. Official knowledge, politely", focus: "zone-sources", zoom: 1.1, content: `
       <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Datasheet PDFs that robots.txt disallows are never crawled — users upload them, tagged by product and hardware model.</p>` },
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `

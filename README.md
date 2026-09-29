@@ -25,12 +25,13 @@ Drag to pan, scroll to zoom, click a component for its specification, search fro
 - One Google Cloud project, region `europe-west4`, built by Terraform.
 - **No public endpoint**: private GKE nodes, no public control-plane IP (IAM-authorised DNS
   endpoint), no Ingress or load balancer; users connect with `kubectl port-forward`.
-- Four workloads — `gateway` (UI + API proxy), `api`, `worker`, `sync` ×2 — coordinated through a
+- Five workloads — `gateway` (UI + API proxy), `api`, `worker` ×2 (analysis), `worker-interactive` ×2 (renders, assistant, file intake), `sync` ×2 — coordinated through a
   PostgreSQL job queue (`SKIP LOCKED`, heartbeats) and an event log streamed to browsers (SSE).
-- Least privilege: one service account per workload via Workload Identity, no keys; only `worker`
+- Least privilege: one service account per workload via Workload Identity, no keys; only the workers
   and `sync` may call Vertex AI; third-party credentials are write-only.
-- Models: Gemini OCR in `europe-west4`; Claude Sonnet (Opus for escalation) on the Vertex AI
-  `global` endpoint pending EU quota.
+- Models: Gemini OCR in `europe-west4`; Claude Sonnet 5 (Opus 5.5 for escalation and the deep judge) on
+  the Vertex AI `global` endpoint pending EU quota; EU-resident cases switch automatically to Gemini 2.5
+  in `europe-west4`.
 - Documentation mirrored incrementally from official sources: GET only, robots.txt honoured.
 
 ## Run locally
