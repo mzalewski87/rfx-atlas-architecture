@@ -76,7 +76,7 @@ const ARCHITECTURE_DATA = {
     { id: "secrets", x: 1420, y: 410, w: 250, h: 72, icon: "secret", title: "Secret Manager", sub: "DB · admin · Koi (write-only)" },
     { id: "registry", x: 1150, y: 520, w: 250, h: 72, icon: "registry", title: "Artifact Registry", sub: "app · gateway · sync images" },
     { id: "wi", x: 1420, y: 520, w: 250, h: 72, icon: "iam", title: "Workload Identity", sub: "SA per workload · no keys" },
-    { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "OCR · EU-resident cases", badge: "EU" },
+    { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "2.5 in EU · 3.x on global", badge: "EU+G" },
     { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" }
   ],
 
@@ -291,7 +291,7 @@ const ARCHITECTURE_DATA = {
     gemini: {
       name: "Vertex AI — Gemini", category: "Models", icon: "gemini",
       summary: "OCR of scanned pages (verbatim transcription in the source language), in the EU region — and every model task of an EU-resident case: routes whose endpoint is outside the EU switch automatically to Gemini here, including the assistant's tool loop.",
-      details: { "OCR": "gemini-2.5-flash → gemini-2.5-pro (illegible or truncated pages)", "EU-resident cases": "gemini-2.5-pro (segmentation, judge, evaluation, assistant), gemini-2.5-flash (translation)", "Region": "europe-west4", "Gemma": "not offered as a managed Vertex AI endpoint" }
+      details: { "OCR (default)": "gemini-3.5-flash-lite → gemini-3.8-flash, global endpoint (Gemini 3.x is served only there)", "EU-resident / anonymised cases": "OCR gemini-2.5-flash → 2.5-pro; gemini-2.5-pro for segmentation, judge, evaluation, assistant; 2.5-flash for translation — europe-west4", "Gemma": "not offered as a managed Vertex AI endpoint" }
     },
     claude: {
       name: "Vertex AI — Claude", category: "Models", icon: "claude",
@@ -337,6 +337,7 @@ const ARCHITECTURE_DATA = {
         { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5. PARTIAL answers are split into what is met and what is not; NEEDS VERIFICATION into what is certain and what must be verified.", nodes: ["worker", "claude"] },
         { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
         { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
+        { title: "Engineer knowledge", text: "An override needs the engineer's written justification (links optional). By default it becomes a global, authored memory entry for the chosen products — Polish is translated to English by the worker — so every later case grades with it.", nodes: ["browser", "api", "sql", "worker"] },
         { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment.", nodes: ["queue", "api", "browser"] }
       ]
     },
