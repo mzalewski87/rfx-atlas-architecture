@@ -487,7 +487,7 @@ const ARCHITECTURE_DATA = {
     { title: "6. Models and data residency", focus: "claude", zoom: 1.35, content: `
       <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. A case flagged <strong>EU data residency</strong> switches automatically: every task whose model runs outside the EU uses Gemini 2.5 in europe-west4 instead. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
     { title: "7. Official knowledge, politely", focus: "zone-sources", zoom: 1.1, content: `
-      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Datasheet PDFs that robots.txt disallows are never crawled — users upload them, tagged by product and hardware model.</p>` },
+      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Datasheet pages feed a weekly catalogue; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `
       <p>Deploys hand running jobs over gracefully; lost workers are detected by heartbeats; evaluations and syncs resume where they stopped; one failed model call never sinks a run. See the Failure Simulator tab.</p>` },
     { title: "9. Reproducible deployment", focus: "tooling", zoom: 1.35, content: `
