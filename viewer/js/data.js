@@ -51,7 +51,7 @@ const ARCHITECTURE_DATA = {
     { id: "src-pandev", x: 1473, y: 78, w: 222, h: 46, icon: "docs", title: "pan.dev + Portkey", sub: "developer & AI gateway docs" },
     { id: "src-github", x: 1015, y: 132, w: 222, h: 46, icon: "github", title: "GitHub (P2)", sub: "OpenAPI specifications" },
     { id: "src-koi", x: 1244, y: 132, w: 222, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
-    { id: "src-www", x: 1473, y: 132, w: 222, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet PDFs: not crawled" },
+    { id: "src-www", x: 1473, y: 132, w: 222, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet catalogue · authorised PDFs" },
 
     { id: "control-plane", x: 60, y: 272, w: 300, h: 56, icon: "control", title: "GKE control plane", sub: "DNS endpoint · IAM-authorised" },
     { id: "iam-user", x: 380, y: 272, w: 260, h: 56, icon: "iam", title: "Cloud IAM", sub: "user roles gate kubectl & secrets" },
@@ -188,9 +188,9 @@ const ARCHITECTURE_DATA = {
       details: { "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
     },
     "src-www": {
-      name: "paloaltonetworks.com datasheets", category: "Not crawled", icon: "docs",
-      summary: "Datasheet PDFs live under /content/dam/, which robots.txt disallows for automated clients. The platform never fetches them; users download a datasheet in the browser and upload it as a product document (tagged by product and hardware model).",
-      details: { "Rule": "robots.txt is honoured for every automated fetch", "Alternative": "Knowledge → Datasheets and technical specifications (upload)" }
+      name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
+      summary: "A weekly job reads the sitemap and the datasheet pages (allowed by robots.txt) into a catalogue: title, edition date, PDF address. The PDFs sit under /content/dam/, which robots.txt asks automated clients to skip; with the site owner's approval for internal use, an administrator can switch on an authorised download that records the basis of that approval. Otherwise administrators upload the PDFs by hand. Either way each file passes the same edition check (older refused, identical skipped, newer replaces).",
+      details: { "Catalogue": "weekly, incremental by sitemap lastmod, 1 request/s", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
     },
     "control-plane": {
       name: "GKE control plane", category: "Kubernetes", icon: "control",
