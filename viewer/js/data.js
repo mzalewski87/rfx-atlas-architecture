@@ -17,15 +17,15 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-09-29"
+    lastReviewed: "2026-10-01"
   },
 
   canvas: { width: 1740, height: 1060 },
 
   // ------------------------------------------------------------------ zones ---
   zones: [
-    { id: "zone-workstation", x: 30, y: 30, w: 640, h: 160, cls: "zone-external",
-      title: "Engineer workstation", sub: "Browser · kubectl · deployment tooling" },
+    { id: "zone-workstation", x: 30, y: 30, w: 940, h: 160, cls: "zone-external",
+      title: "Engineer workstation", sub: "Browser · kubectl · deployment tooling · backups kept off-platform" },
     { id: "zone-sources", x: 1000, y: 30, w: 710, h: 160, cls: "zone-external",
       title: "Public documentation sources (GET only, robots.txt respected)", sub: "Egress through Cloud NAT" },
     { id: "zone-gcp", x: 30, y: 230, w: 1680, h: 800, cls: "zone-gcp",
@@ -45,6 +45,7 @@ const ARCHITECTURE_DATA = {
     { id: "browser", x: 50, y: 85, w: 200, h: 64, icon: "browser", title: "Web browser", sub: "React UI · SSE" },
     { id: "tunnel", x: 270, y: 85, w: 200, h: 64, icon: "tunnel", title: "kubectl port-forward", sub: "localhost:8080 → gateway" },
     { id: "tooling", x: 490, y: 85, w: 165, h: 64, icon: "tooling", title: "Deploy tooling", sub: "terraform · docker" },
+    { id: "offsite", x: 675, y: 85, w: 280, h: 64, icon: "lock", title: "Off-platform backup", sub: "encrypted .rfxbak + passphrase" },
 
     { id: "src-techdocs", x: 1015, y: 78, w: 222, h: 46, icon: "docs", title: "techdocs", sub: "docs.paloaltonetworks.com" },
     { id: "src-gitbook", x: 1244, y: 78, w: 222, h: 46, icon: "gitbook", title: "Cortex GitBook", sub: "Cortex / Cortex Cloud" },
@@ -70,7 +71,7 @@ const ARCHITECTURE_DATA = {
 
     { id: "sql", x: 90, y: 900, w: 320, h: 72, icon: "sql", title: "Cloud SQL PostgreSQL 16", sub: "cases · results · users · memory" },
     { id: "queue", x: 430, y: 900, w: 320, h: 72, icon: "queue", title: "Job queue + event log", sub: "SKIP LOCKED · heartbeats · SSE source" },
-    { id: "backups", x: 770, y: 900, w: 300, h: 72, icon: "sql", title: "Backups", sub: "daily + point-in-time recovery" },
+    { id: "backups", x: 770, y: 900, w: 300, h: 72, icon: "sql", title: "Database backups", sub: "daily + PITR, inside the project" },
 
     { id: "gcs", x: 1150, y: 410, w: 250, h: 72, icon: "gcs", title: "Cloud Storage", sub: "files · corpus · outputs · index" },
     { id: "secrets", x: 1420, y: 410, w: 250, h: 72, icon: "secret", title: "Secret Manager", sub: "DB · admin · Koi (write-only)" },
@@ -114,7 +115,8 @@ const ARCHITECTURE_DATA = {
     { from: "k8s-secrets", to: "api", cls: "secret" },
     { from: "wi", to: "worker", cls: "secret" },
     { from: "wi", to: "worker-interactive", cls: "secret" },
-    { from: "sql", to: "backups", cls: "data" }
+    { from: "sql", to: "backups", cls: "data" },
+    { from: "browser", to: "offsite", cls: "data" }
   ],
 
   // ------------------------------------------------------------ view presets ---
@@ -209,12 +211,12 @@ const ARCHITECTURE_DATA = {
     },
     api: {
       name: "api (FastAPI)", category: "Workload", icon: "api",
-      summary: "REST API, server-sent events, uploads and access control. Enforces per-case access (creator, invited members, administrators read-only) on every case endpoint, the job list and the event stream. Holds no model permission.",
-      details: { "Replicas": "1", "Resources": "250m CPU / 512 Mi–1 Gi", "Service account": "rfx-atlas-api", "Permissions": "bucket objects, Koi secret versions (write-only)", "Auth": "Argon2 passwords, server-side sessions", "Contract": "docs/api/openapi.json" }
+      summary: "REST API, server-sent events, uploads and access control. Enforces per-case access (creator, co-owners, collaborators, read-only members, administrators read-only) on every case endpoint, the job list and the event stream. Streams backups encrypted with the downloader's passphrase and decrypts uploaded ones. Holds no model permission.",
+      details: { "Replicas": "1", "Resources": "250m CPU / 512 Mi–1 Gi", "Service account": "rfx-atlas-api", "Permissions": "bucket objects, Koi secret versions (write-only)", "Auth": "Argon2 passwords, server-side sessions", "Contract": "docs/api/openapi.json", "Backups": "encrypt on download, decrypt on upload (4 GiB temporary disk)", "Previews": "DOCX / XLSX / PDF rendered to data, user guide as a PDF" }
     },
     worker: {
       name: "worker", category: "Workload", icon: "worker",
-      summary: "Claims every job kind except documentation sync from the PostgreSQL queue: OCR, segmentation, judge, evaluation, translation of generated text and search-index builds (and short jobs when idle). With worker-interactive and sync, the only workloads allowed to call Vertex AI.",
+      summary: "Claims every job kind except documentation sync from the PostgreSQL queue: OCR, segmentation, judge, evaluation, hardware sizing (appliances and VM-Series credits), translation of generated text, search-index builds and platform backups and restores (and short jobs when idle). With worker-interactive and sync, the only workloads allowed to call Vertex AI.",
       details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "sync scheduler + orphaned-job reaper" }
     },
     "worker-interactive": {
@@ -264,13 +266,25 @@ const ARCHITECTURE_DATA = {
         "Deferral": "not_before: a job waiting for a knowledge refresh is re-checked every 20 s without holding a worker", "Lost jobs": "no heartbeat for 15 min → job.lost, requeued while attempts remain", "SSE filtering": "per user: only events of cases they may see" }
     },
     backups: {
-      name: "Database backups", category: "Data", icon: "sql",
-      summary: "Automated daily backups with point-in-time recovery; on-demand backups before risky migrations.",
-      details: { "Window": "02:00 UTC", "PITR": "enabled" }
+      name: "Database backups (Cloud SQL)", category: "Data", icon: "sql",
+      summary: "Automated daily backups with point-in-time recovery; on-demand backups before risky migrations. They live inside the project — to rebuild the platform elsewhere, use a platform backup kept off-platform.",
+      details: { "Window": "02:00 UTC", "PITR": "enabled", "Scope": "database only, same project" }
+    },
+    offsite: {
+      name: "Off-platform backup", category: "Disaster recovery", icon: "lock",
+      summary: "An encrypted package of everything the platform created — users, cases, files, results and overrides, team memory, product documents, price lists, settings — downloaded by an administrator and kept outside the platform. A fresh deployment from the repository plus this one file gives the same platform, 1:1.",
+      details: {
+        "Format": "gzip'd tar (manifest, one JSONL per table, objects) encrypted with AES-256-GCM in 1 MiB frames",
+        "Key": "scrypt from the administrator's passphrase — never stored by the platform",
+        "Integrity": "header-bound associated data: truncated, reordered or altered files fail",
+        "Not included": "documentation corpus and index (re-synced), source credentials, tunnel IAM/RBAC",
+        "Restore": "Backups page (upload → check → type RESTORE) or rfx-atlas-admin backup-restore",
+        "Reminder": "administrators are reminded after 7 days without a download"
+      }
     },
     gcs: {
       name: "Cloud Storage bucket", category: "Data", icon: "gcs",
-      summary: "Customer files and page images, the documentation corpus (one file per page with metadata), generated outputs, product documents and index snapshots.",
+      summary: "Customer files and page images, the documentation corpus (one file per page with metadata), generated outputs, product documents, price lists, index snapshots and backup packages (backups/, the ten newest).",
       details: { "Name": "<project>-rfx-atlas", "Access": "uniform, public access prevented", "Versioning": "on (5 archived versions kept)" }
     },
     secrets: {
@@ -336,7 +350,7 @@ const ARCHITECTURE_DATA = {
         { title: "Grade", text: "Claude Sonnet returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side).", nodes: ["worker", "claude"] },
         { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5. PARTIAL answers are split into what is met and what is not; NEEDS VERIFICATION into what is certain and what must be verified.", nodes: ["worker", "claude"] },
         { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
-        { title: "Hardware sizing", text: "Hardware requirements become measurable constraints (throughput, sessions, ports, power supplies, rack units), matched in code against the per-model figures read from the loaded datasheets: met, not met or not stated; the smallest fitting model per family is recommended and the engineer's model and quantity go into the BOM.", nodes: ["worker", "claude", "sql"] },
+        { title: "Hardware sizing", text: "Hardware requirements become measurable constraints from the tender's original wording, matched in code against the per-model figures read from the loaded datasheets (decryption throughput approximated by Threat Prevention). Quantities come from the case documents — a mandatory HA requirement means at least a pair — and capacities scale across units; Claude advises a model and quantity with reasons. VM-Series / CN-Series are sized in vCPUs and Software NGFW credits. A changed quantity is an override with its author.", nodes: ["worker", "claude", "sql"] },
         { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
         { title: "Engineer knowledge", text: "An override needs the engineer's written justification (links optional). By default it becomes a global, authored memory entry for the chosen products — Polish is translated to English by the worker — so every later case grades with it.", nodes: ["browser", "api", "sql", "worker"] },
         { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment.", nodes: ["queue", "api", "browser"] }
@@ -346,8 +360,9 @@ const ARCHITECTURE_DATA = {
       id: "flow-outputs", name: "4. Outputs and write-back", color: "#A855F7",
       description: "Compliance matrix, summary, BOM, or the answers written into the customer's own file.",
       steps: [
-        { title: "Request", text: "The browser requests an output (read access suffices); the API queues output.render.", nodes: ["browser", "api", "queue"] },
-        { title: "Render", text: "worker-interactive reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy (with Engineer notes and Documentation columns), PDF annotated; stored translations are reused; BOM maps to an optional SKU price list.", nodes: ["worker-interactive", "sql", "gcs"] },
+        { title: "Confirm and request", text: "The engineer confirms having reviewed every requirement and the assessment; they become the document's owner. Read-only members download existing documents but generate none. The API queues output.render.", nodes: ["browser", "api", "queue"] },
+        { title: "Render", text: "worker-interactive reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy (with Engineer notes and Documentation columns), PDF annotated; stored translations are reused. The executive summary is client-ready — logo, statistics, blockers, proposed hardware — and closes with the owner's sign-off stamp.", nodes: ["worker-interactive", "sql", "gcs"] },
+        { title: "Bill of materials", text: "With an official price list (every sheet parsed; eliminated, lab, NFR and past end-of-life SKUs excluded): appliance SKUs, per-device subscriptions and support for the tender's term, HA-pair SKUs, the smallest virtual Panorama licence, Software NGFW credits for VM-Series, extended prices and a total.", nodes: ["worker-interactive", "gcs", "sql"] },
         { title: "Download", text: "output.ready event; the file is downloaded through the API with its server-side name.", nodes: ["gcs", "api", "gateway", "browser"] }
       ]
     },
@@ -389,11 +404,33 @@ const ARCHITECTURE_DATA = {
         { title: "Secrets and manifests", text: "Database URL and admin password go from Secret Manager into Kubernetes Secrets; manifests are applied.", nodes: ["secrets", "k8s-secrets", "control-plane"] },
         { title: "Migrate and roll out", text: "The init job migrates the database and creates the first admin; deployments roll out; running jobs are handed over gracefully.", nodes: ["init", "sql", "gateway", "api", "worker", "sync"] }
       ]
+    },
+    {
+      id: "flow-backup", name: "9. Backup and rebuild", color: "#F43F5E",
+      description: "Everything the platform created leaves it as one encrypted file, and comes back on a fresh deployment.",
+      steps: [
+        { title: "Create", text: "An administrator creates a backup; backup.create reads every non-transient table in one transaction and the user objects (case files, outputs, price lists, product documents) into a package in the bucket.", nodes: ["browser", "api", "queue", "worker", "sql", "gcs"] },
+        { title: "Download encrypted", text: "The API streams the package encrypted with the administrator's passphrase (AES-256-GCM, scrypt); the passphrase is never stored. The file is kept outside the platform.", nodes: ["gcs", "api", "gateway", "browser", "offsite"] },
+        { title: "Rebuild", text: "A new platform is deployed from the repository: Terraform, deploy.sh, migrations, the first administrator.", nodes: ["tooling", "control-plane", "registry", "init", "sql"] },
+        { title: "Upload and check", text: "The administrator uploads the file with its passphrase; the API decrypts it and checks the format and schema version before anything is replaced.", nodes: ["offsite", "browser", "api", "gcs"] },
+        { title: "Restore", text: "backup.restore writes the objects, replaces every backed-up table in one transaction, removes what the backup lacks and signs everyone out.", nodes: ["worker", "sql", "gcs", "queue"] },
+        { title: "Re-sync", text: "The documentation re-syncs and the index rebuilds by themselves; source credentials and tunnel access are set up again.", nodes: ["sync", "nat", "src-techdocs", "worker", "index-cache"] }
+      ]
     }
   ],
 
   // -------------------------------------------------------------- scenarios ---
   scenarios: [
+    {
+      id: "scn-rebuild", tag: "Disaster recovery", name: "Platform rebuilt from scratch",
+      description: "The whole environment is gone — cluster, database, bucket — and the platform must come back as it was.",
+      steps: [
+        { phase: "Lost", status: "failure", message: "Nothing is left in the project: no database, no files, no in-project database backups.", affectedNodes: ["sql", "gcs", "backups"] },
+        { phase: "Redeploy", status: "action", message: "Terraform and deploy.sh stand up an empty platform from the repository in about 30 minutes.", affectedNodes: ["tooling", "control-plane", "init"] },
+        { phase: "Restore", status: "action", message: "The administrator uploads the latest off-platform backup with its passphrase and restores it: users, cases, files, results, overrides, memory, price lists and settings return 1:1.", affectedNodes: ["offsite", "api", "worker", "sql", "gcs"] },
+        { phase: "Back in service", status: "restored", message: "Users sign in with their own passwords; the documentation re-syncs and the index rebuilds in the background; source credentials and tunnel access are re-applied.", affectedNodes: ["browser", "sync", "index-cache"] }
+      ]
+    },
     {
       id: "scn-busy", tag: "Load", name: "Several consultants at once",
       description: "Two evaluations run while other consultants render documents and ask the assistant.",
@@ -492,6 +529,9 @@ const ARCHITECTURE_DATA = {
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `
       <p>Deploys hand running jobs over gracefully; lost workers are detected by heartbeats; evaluations and syncs resume where they stopped; one failed model call never sinks a run. See the Failure Simulator tab.</p>` },
     { title: "9. Reproducible deployment", focus: "tooling", zoom: 1.35, content: `
-      <p>An empty Google Cloud project with billing is enough: <code>preflight.sh</code> → Terraform → <code>deploy.sh</code> → <code>post-deploy.sh</code>. The step-by-step guide is <code>docs/DEPLOYMENT.md</code> in the private repository.</p>` }
+      <p>An empty Google Cloud project with billing is enough: <code>preflight.sh</code> → Terraform → <code>deploy.sh</code> → <code>post-deploy.sh</code>. The step-by-step guide is <code>docs/DEPLOYMENT.md</code> in the private repository.</p>` },
+    { title: "10. Data that survives the platform", focus: "offsite", zoom: 1.35, content: `
+      <p>Everything the team creates — cases, files, verdict overrides, team memory, price lists, settings, accounts — leaves the platform as one <strong>encrypted backup file</strong> (AES-256-GCM, passphrase never stored). A fresh deployment plus that file gives the same platform, 1:1; the documentation corpus re-syncs by itself.</p>
+      <div class="callout-box"><strong>Keep a recent backup off-platform.</strong> Administrators are reminded after seven days without a download.</div>` }
   ]
 };
