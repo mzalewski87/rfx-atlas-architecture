@@ -211,7 +211,7 @@ const ARCHITECTURE_DATA = {
     },
     api: {
       name: "api (FastAPI)", category: "Workload", icon: "api",
-      summary: "REST API, server-sent events, uploads and access control. Enforces per-case access (creator, co-owners, collaborators, read-only members, administrators read-only) on every case endpoint, the job list and the event stream. Streams backups encrypted with the downloader's passphrase and decrypts uploaded ones. Holds no model permission.",
+      summary: "REST API, server-sent events, uploads and access control. Enforces per-case access (creator, co-owners, collaborators, read-only members, administrators read-only) on every case endpoint, the job list and the event stream. Streams backups encrypted with the downloader's passphrase and decrypts uploaded ones. Serves the dashboard (case statistics, users online, live pool load) and the business status of cases (owners only, with a comment). Holds no model permission.",
       details: { "Replicas": "1", "Resources": "250m CPU / 512 Mi–1 Gi", "Service account": "rfx-atlas-api", "Permissions": "bucket objects, Koi secret versions (write-only)", "Auth": "Argon2 passwords, server-side sessions", "Contract": "docs/api/openapi.json", "Backups": "encrypt on download, decrypt on upload (4 GiB temporary disk)", "Previews": "DOCX / XLSX / PDF rendered to data, user guide as a PDF" }
     },
     worker: {
@@ -415,6 +415,17 @@ const ARCHITECTURE_DATA = {
         { title: "Upload and check", text: "The administrator uploads the file with its passphrase; the API decrypts it and checks the format and schema version before anything is replaced.", nodes: ["offsite", "browser", "api", "gcs"] },
         { title: "Restore", text: "backup.restore writes the objects, replaces every backed-up table in one transaction, removes what the backup lacks and signs everyone out.", nodes: ["worker", "sql", "gcs", "queue"] },
         { title: "Re-sync", text: "The documentation re-syncs and the index rebuilds by themselves; source credentials and tunnel access are set up again.", nodes: ["sync", "nat", "src-techdocs", "worker", "index-cache"] }
+      ]
+    },
+    {
+      id: "flow-workflow", name: "10. Case workflow, questions and dashboard", color: "#0EA5E9",
+      description: "From the first answer to the outcome: questions to the customer, business status, and the dashboard.",
+      steps: [
+        { title: "Big picture", text: "Before the judge, the worker reads every document row into the tender's big picture (organisation, sites and links, users, whether sites need equipment); the judge fits the whole deployment and sizing turns sites into device groups.", nodes: ["worker", "claude", "sql"] },
+        { title: "Questions to the customer", text: "For requirements that are unclear or not met as written, the worker writes one question each, phrased so that 'yes' means compliance; they leave as a signed-off XLSX.", nodes: ["browser", "api", "queue", "worker", "claude", "gcs"] },
+        { title: "Answers and re-grading", text: "The customer's filled questionnaire is imported; the answered requirements are graded again with the answer as context. Answers never become knowledge.", nodes: ["browser", "api", "worker", "sql"] },
+        { title: "Business status", text: "An owner moves the case to awaiting customer reply, final answer sent, won, lost or archived — always with a comment, kept as history.", nodes: ["browser", "api", "sql"] },
+        { title: "Dashboard", text: "Cases by status and step, users online (session activity in the last 5 minutes) and the live load of each worker pool, refreshed every 10 seconds.", nodes: ["browser", "api", "sql", "queue"] }
       ]
     }
   ],
