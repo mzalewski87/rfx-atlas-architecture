@@ -177,7 +177,7 @@ const ARCHITECTURE_DATA = {
     "src-pandev": {
       name: "pan.dev and Portkey", category: "Documentation source · P1", icon: "docs",
       summary: "Developer documentation (pan.dev) and AI-gateway documentation (Portkey).",
-      details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "weekly", "Portkey": "Markdown source, daily" }
+      details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20" }
     },
     "src-github": {
       name: "GitHub — PaloAltoNetworks", category: "Documentation source · P2", icon: "github",
@@ -191,8 +191,8 @@ const ARCHITECTURE_DATA = {
     },
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
-      summary: "A weekly job reads the sitemap and the datasheet pages (allowed by robots.txt) into a catalogue: title, edition date, PDF address. The PDFs sit under /content/dam/, which robots.txt asks automated clients to skip; with the site owner's approval for internal use, an administrator can switch on an authorised download that records the basis of that approval. Otherwise administrators upload the PDFs by hand. Either way each file passes the same edition check (older refused, identical skipped, newer replaces).",
-      details: { "Catalogue": "weekly, incremental by sitemap lastmod, 1 request/s", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
+      summary: "A daily job (05:00) reads the sitemap and the datasheet pages (allowed by robots.txt) into a catalogue: title, edition date, PDF address. The PDFs sit under /content/dam/, which robots.txt asks automated clients to skip; with the site owner's approval for internal use, an administrator can switch on an authorised download that records the basis of that approval. Otherwise administrators upload the PDFs by hand. Either way each file passes the same edition check (older refused, identical skipped, newer replaces).",
+      details: { "Catalogue": "daily 05:00, incremental by sitemap lastmod, 1 request/s", "New datasheets": "first seen after the last review: administrators get a notice until they mark them reviewed", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
     },
     "control-plane": {
       name: "GKE control plane", category: "Kubernetes", icon: "control",
@@ -212,12 +212,12 @@ const ARCHITECTURE_DATA = {
     api: {
       name: "api (FastAPI)", category: "Workload", icon: "api",
       summary: "REST API, server-sent events, uploads and access control. Enforces per-case access (creator, co-owners, collaborators, read-only members, administrators read-only) on every case endpoint, the job list and the event stream. Streams backups encrypted with the downloader's passphrase and decrypts uploaded ones. Serves the dashboard (case statistics, users online, live pool load) and the business status of cases (owners only, with a comment). Holds no model permission.",
-      details: { "Replicas": "1", "Resources": "250m CPU / 512 Mi–1 Gi", "Service account": "rfx-atlas-api", "Permissions": "bucket objects, Koi secret versions (write-only)", "Auth": "Argon2 passwords, server-side sessions", "Contract": "docs/api/openapi.json", "Backups": "encrypt on download, decrypt on upload (4 GiB temporary disk)", "Previews": "DOCX / XLSX / PDF rendered to data, user guide as a PDF" }
+      details: { "Replicas": "1", "Resources": "250m CPU / 512 Mi–1 Gi", "Service account": "rfx-atlas-api", "Permissions": "bucket objects, Koi secret versions (write-only)", "Auth": "Argon2 passwords, server-side sessions", "Contract": "docs/api/openapi.json", "Backups": "encrypt on download, decrypt on upload (4 GiB temporary disk)", "Previews": "DOCX / XLSX / PDF rendered to data, user guide as a PDF", "Memory export": "all memory entries and reference specifications as XLSX or JSON" }
     },
     worker: {
       name: "worker", category: "Workload", icon: "worker",
       summary: "Claims every job kind except documentation sync from the PostgreSQL queue: OCR, segmentation, judge, evaluation, hardware sizing (appliances and VM-Series credits), translation of generated text, search-index builds and platform backups and restores (and short jobs when idle). With worker-interactive and sync, the only workloads allowed to call Vertex AI.",
-      details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "sync scheduler + orphaned-job reaper" }
+      details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "scheduler (Europe/Warsaw: syncs from 03:00, datasheet catalogue 05:00, automatic backup 05:30; one run per slot under a row lock) + orphaned-job reaper" }
     },
     "worker-interactive": {
       name: "worker-interactive", category: "Workload", icon: "worker",
@@ -279,7 +279,7 @@ const ARCHITECTURE_DATA = {
         "Integrity": "header-bound associated data: truncated, reordered or altered files fail",
         "Not included": "documentation corpus and index (re-synced), source credentials, tunnel IAM/RBAC",
         "Restore": "Backups page (upload → check → type RESTORE) or rfx-atlas-admin backup-restore",
-        "Reminder": "administrators are reminded after 7 days without a download"
+        "Automatic": "every day at 05:30 (Europe/Warsaw); the ten newest packages stay in the bucket", "Reminder": "administrators see a bar while the newest backup is not downloaded, and after 7 days without a download"
       }
     },
     gcs: {
@@ -379,7 +379,7 @@ const ARCHITECTURE_DATA = {
       id: "flow-sync", name: "6. Documentation sync and index build", color: "#22C55E",
       description: "Incremental, scheduled mirroring of official documentation into the corpus and a new index snapshot.",
       steps: [
-        { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron; a sync pod claims it.", nodes: ["queue", "sync"] },
+        { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart; a sync pod claims it.", nodes: ["queue", "sync"] },
         { title: "Fetch politely", text: "GET only, robots.txt, ~1 request/s, identifying User-Agent, via Cloud NAT. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
         { title: "Corpus", text: "Each page is stored with its product and tier; sync state is recorded per document.", nodes: ["sync", "gcs", "sql"] },
         { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25, applying current product routing and hardware tags, and publishes a snapshot.", nodes: ["queue", "worker", "gcs"] },
@@ -409,7 +409,7 @@ const ARCHITECTURE_DATA = {
       id: "flow-backup", name: "9. Backup and rebuild", color: "#F43F5E",
       description: "Everything the platform created leaves it as one encrypted file, and comes back on a fresh deployment.",
       steps: [
-        { title: "Create", text: "An administrator creates a backup; backup.create reads every non-transient table in one transaction and the user objects (case files, outputs, price lists, product documents) into a package in the bucket.", nodes: ["browser", "api", "queue", "worker", "sql", "gcs"] },
+        { title: "Create", text: "The scheduler queues an automatic backup every day at 05:30 (an administrator can also create one); backup.create reads every non-transient table in one transaction and the user objects (case files, outputs, price lists, product documents) into a package in the bucket.", nodes: ["browser", "api", "queue", "worker", "sql", "gcs"] },
         { title: "Download encrypted", text: "The API streams the package encrypted with the administrator's passphrase (AES-256-GCM, scrypt); the passphrase is never stored. The file is kept outside the platform.", nodes: ["gcs", "api", "gateway", "browser", "offsite"] },
         { title: "Rebuild", text: "A new platform is deployed from the repository: Terraform, deploy.sh, migrations, the first administrator.", nodes: ["tooling", "control-plane", "registry", "init", "sql"] },
         { title: "Upload and check", text: "The administrator uploads the file with its passphrase; the API decrypts it and checks the format and schema version before anything is replaced.", nodes: ["offsite", "browser", "api", "gcs"] },
@@ -536,13 +536,13 @@ const ARCHITECTURE_DATA = {
     { title: "6. Models and data residency", focus: "claude", zoom: 1.35, content: `
       <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. A case flagged <strong>EU data residency</strong> switches automatically: every task whose model runs outside the EU uses Gemini 2.5 in europe-west4 instead. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
     { title: "7. Official knowledge, politely", focus: "zone-sources", zoom: 1.1, content: `
-      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Datasheet pages feed a weekly catalogue; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
+      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Every source syncs nightly from 03:00; datasheet pages feed a catalogue checked daily, with new datasheets flagged for review; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `
       <p>Deploys hand running jobs over gracefully; lost workers are detected by heartbeats; evaluations and syncs resume where they stopped; one failed model call never sinks a run. See the Failure Simulator tab.</p>` },
     { title: "9. Reproducible deployment", focus: "tooling", zoom: 1.35, content: `
       <p>An empty Google Cloud project with billing is enough: <code>preflight.sh</code> → Terraform → <code>deploy.sh</code> → <code>post-deploy.sh</code>. The step-by-step guide is <code>docs/DEPLOYMENT.md</code> in the private repository.</p>` },
     { title: "10. Data that survives the platform", focus: "offsite", zoom: 1.35, content: `
       <p>Everything the team creates — cases, files, verdict overrides, team memory, price lists, settings, accounts — leaves the platform as one <strong>encrypted backup file</strong> (AES-256-GCM, passphrase never stored). A fresh deployment plus that file gives the same platform, 1:1; the documentation corpus re-syncs by itself.</p>
-      <div class="callout-box"><strong>Keep a recent backup off-platform.</strong> Administrators are reminded after seven days without a download.</div>` }
+      <div class="callout-box"><strong>Keep a recent backup off-platform.</strong> A backup is made automatically every day at 05:30; administrators are reminded until the newest one is downloaded.</div>` }
   ]
 };
