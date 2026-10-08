@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-01"
+    lastReviewed: "2026-10-09"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -78,7 +78,7 @@ const ARCHITECTURE_DATA = {
     { id: "registry", x: 1150, y: 520, w: 250, h: 72, icon: "registry", title: "Artifact Registry", sub: "app · gateway · sync images" },
     { id: "wi", x: 1420, y: 520, w: 250, h: 72, icon: "iam", title: "Workload Identity", sub: "SA per workload · no keys" },
     { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "2.5 in EU · 3.x on global", badge: "EU+G" },
-    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" }
+    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5.5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" }
   ],
 
   // ------------------------------------------------------------------ links ---
@@ -310,7 +310,7 @@ const ARCHITECTURE_DATA = {
     claude: {
       name: "Vertex AI — Claude", category: "Models", icon: "claude",
       summary: "Segmentation, translation, judge, evaluation and the assistant for cases without the EU-residency flag. Runs on the global endpoint until EU quota is available — requests may be processed outside the EU. Routing is a setting, switchable without a release.",
-      details: { "Default": "claude-sonnet-5", "Escalation": "claude-opus-5-5 (uncertain verdicts, deep evaluation, deep judge)", "Discovery": "models.discover probes every model per region", "Logged": "every call in llm_calls (tokens, latency, case)" }
+      details: { "Default": "claude-sonnet-5-5 (since 0.6.0)", "Escalation": "claude-opus-5-5 (uncertain verdicts, deep evaluation, deep judge)", "Discovery": "models.discover probes every model per region", "Logged": "every call in llm_calls (tokens, latency, case); cost per case and month from an editable price table" }
     }
   },
 
@@ -347,13 +347,14 @@ const ARCHITECTURE_DATA = {
         { title: "Knowledge state", text: "Before the judge or any evaluation the UI shows the index date and an estimated refresh time. Refreshing queues the chosen syncs; the analysis job defers itself in the queue (not_before) until the syncs and the index build finish, then loads the new index. Or the user proceeds with the current state.", nodes: ["browser", "api", "queue", "sync", "index-cache"] },
         { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements — on Sonnet, or on Opus 5.5 when the engineer ticks the stronger model. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
         { title: "Retrieve", text: "For each requirement: confirmed memory (tier M), in-scope passages with the best ones of every offered component (products an offered licence includes count as offered, e.g. XDR within XSIAM), labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets.", nodes: ["worker", "index-cache", "sql"] },
-        { title: "Grade", text: "Claude Sonnet names the offered components the requirement is about and grades only against them; it returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side). Partner obligations (local support, on-site service, supplier SLA) are not graded.", nodes: ["worker", "claude"] },
+        { title: "Grade", text: "Claude Sonnet 5.5 names the offered components the requirement is about and grades only against them, reading an item such as \"R190 (a)\" within its clause (source block, parent, lead-in, sibling items); it returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side). Vendor support and services requirements are graded against support, services and Unit 42 datasheets; only obligations of the supplier on the ground (on-site engineers, local helpdesk, logistics) are partner clauses, not graded.", nodes: ["worker", "claude"] },
         { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5. PARTIAL answers are split into what is met and what is not; NEEDS VERIFICATION into what is certain and what must be verified.", nodes: ["worker", "claude"] },
         { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
         { title: "Hardware sizing", text: "Hardware requirements become measurable constraints from the tender's original wording, matched in code against the per-model figures read from the loaded datasheets (decryption throughput approximated by Threat Prevention). Quantities come from the case documents — a mandatory HA requirement means at least a pair — and capacities scale across units; only sites the order covers are priced and only models still sold are proposed — each is checked against the active price list, and one without an orderable device SKU is marked and never recommended; Claude advises a model and quantity with reasons. Virtual appliances are sized whenever the documents require them: VM-Series / CN-Series in vCPUs and Software NGFW credits, Prisma SD-WAN virtual ION by role and vCPUs (PAN-VION SKU); ION SD-WAN throughput is compared through the published IPsec figure. A changed quantity is an override with its author.", nodes: ["worker", "claude", "sql"] },
         { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
         { title: "Engineer knowledge", text: "An override needs the engineer's written justification (links optional). By default it becomes a global, authored memory entry for the chosen products — Polish is translated to English by the worker. It is used in grading only after a second engineer confirms it (four eyes, attested, with history; confirmations can be withdrawn).", nodes: ["browser", "api", "sql", "worker"] },
-        { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment.", nodes: ["queue", "api", "browser"] }
+        { title: "Live review", text: "result.updated events stream to the browser; engineers override verdicts (raising needs a source) and comment. A normally skipped clause can be sent for model evaluation (reason kept), the filtered set re-evaluated in the latest run, and overrides carry into a new run.", nodes: ["queue", "api", "browser"] },
+        { title: "Licence sizing", text: "case.licence_sizing counts the offer's software per vendor metric (users, Mbps, sites by bandwidth tier, endpoints, GB/day) from a sourced licensing catalogue: Claude proposes quantities (only with the rows behind them), editions, add-ons, support plan and professional services; engineers change any of it with a reason (history kept); lines are computed in code and every SKU is resolved in the price list.", nodes: ["worker", "claude", "sql"] }
       ]
     },
     {
@@ -362,7 +363,7 @@ const ARCHITECTURE_DATA = {
       steps: [
         { title: "Confirm and request", text: "The engineer confirms having reviewed every requirement and the assessment; they become the document's owner. Read-only members download existing documents but generate none. The API queues output.render.", nodes: ["browser", "api", "queue"] },
         { title: "Render", text: "worker-interactive reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy (with Engineer notes and Documentation columns), PDF annotated; stored translations are reused. The executive summary is client-ready — logo, statistics, blockers, proposed hardware — and closes with the owner's sign-off stamp.", nodes: ["worker-interactive", "sql", "gcs"] },
-        { title: "Bill of materials", text: "With an official price list (every sheet parsed; eliminated, lab, NFR and past end-of-life SKUs excluded): appliance SKUs, per-device subscriptions and support for the tender's term, HA-pair SKUs, the smallest virtual Panorama licence, Software NGFW credits for VM-Series, extended prices and a total. A model with no device SKU (no longer sold) gets a note instead of an empty price; file names keep national letters.", nodes: ["worker-interactive", "gcs", "sql"] },
+        { title: "Bill of materials", text: "With an official price list (every sheet parsed; eliminated, lab, NFR and past end-of-life SKUs excluded): appliance SKUs, per-device subscriptions and support for the tender's term, HA-pair SKUs, the smallest virtual Panorama licence, Software NGFW credits for VM-Series, extended prices and a total. A model with no device SKU (no longer sold) gets a note instead of an empty price; file names keep national letters. From the licence sizing: software licences and subscriptions, support and professional services in their own sections; products licensed through another product's add-on get no empty line, a SKU missing from the price list lists candidates, a manual price is flagged.", nodes: ["worker-interactive", "gcs", "sql"] },
         { title: "Download", text: "output.ready event; the file is downloaded through the API with its server-side name.", nodes: ["gcs", "api", "gateway", "browser"] }
       ]
     },
@@ -425,7 +426,7 @@ const ARCHITECTURE_DATA = {
         { title: "Questions to the customer", text: "For requirements that are unclear or not met as written, the worker writes one question each, phrased so that 'yes' means compliance; they leave as a signed-off XLSX.", nodes: ["browser", "api", "queue", "worker", "claude", "gcs"] },
         { title: "Answers and re-grading", text: "The customer's filled questionnaire is imported; the answered requirements are graded again with the answer as context. Answers never become knowledge.", nodes: ["browser", "api", "worker", "sql"] },
         { title: "Business status", text: "An owner moves the case to awaiting customer reply, final answer sent, won, lost or archived — always with a comment, kept as history.", nodes: ["browser", "api", "sql"] },
-        { title: "Dashboard", text: "Cases by status and step, users online (session activity in the last 5 minutes) and the live load of each worker pool, refreshed every 10 seconds.", nodes: ["browser", "api", "sql", "queue"] }
+        { title: "Dashboard", text: "Cases by status and step, users online (session activity in the last 5 minutes) and the live load of each worker pool, refreshed every 10 seconds; model tokens and cost month to date, per case and per model, from the logged calls and a dated price table.", nodes: ["browser", "api", "sql", "queue"] }
       ]
     }
   ],
