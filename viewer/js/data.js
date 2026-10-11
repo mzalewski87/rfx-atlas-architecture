@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-09"
+    lastReviewed: "2026-10-11"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -192,7 +192,7 @@ const ARCHITECTURE_DATA = {
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
       summary: "A daily job (05:00) reads the sitemap and the datasheet pages (allowed by robots.txt) into a catalogue: title, edition date, PDF address. The PDFs sit under /content/dam/, which robots.txt asks automated clients to skip; with the site owner's approval for internal use, an administrator can switch on an authorised download that records the basis of that approval. Otherwise administrators upload the PDFs by hand. Either way each file passes the same edition check (older refused, identical skipped, newer replaces).",
-      details: { "Catalogue": "daily 05:00, incremental by sitemap lastmod, 1 request/s", "New datasheets": "first seen after the last review: administrators get a notice until they mark them reviewed", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
+      details: { "Catalogue": "daily 05:00, incremental by sitemap lastmod, 1 request/s", "New datasheets": "first seen after the last review and not loaded yet: administrators get a notice until each is loaded or marked reviewed", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
     },
     "control-plane": {
       name: "GKE control plane", category: "Kubernetes", icon: "control",
@@ -400,7 +400,8 @@ const ARCHITECTURE_DATA = {
       id: "flow-deploy", name: "8. Deployment pipeline", color: "#94A3B8",
       description: "From an empty project to a running platform.",
       steps: [
-        { title: "Infrastructure", text: "Terraform enables APIs and creates the VPC, NAT, GKE Autopilot, Cloud SQL, bucket, registry, secrets and Workload Identity bindings.", nodes: ["tooling", "control-plane", "sql", "gcs", "secrets", "wi"] },
+        { title: "Preflight", text: "preflight.sh checks tools, credentials, billing, rights and the two bootstrap APIs (Service Usage, Cloud Resource Manager); the Claude models are enabled once per project in Model Garden (accepting the provider's terms cannot be automated) and checked with check-models.sh.", nodes: ["tooling", "iam-user", "claude", "gemini"] },
+        { title: "Infrastructure", text: "Terraform (one state per project) enables APIs and creates the VPC, NAT, GKE Autopilot, Cloud SQL, bucket, registry, secrets and Workload Identity bindings.", nodes: ["tooling", "control-plane", "sql", "gcs", "secrets", "wi"] },
         { title: "Images", text: "deploy.sh builds app, gateway and sync images (linux/amd64) with content-hash tags and pushes them.", nodes: ["tooling", "registry"] },
         { title: "Secrets and manifests", text: "Database URL and admin password go from Secret Manager into Kubernetes Secrets; manifests are applied.", nodes: ["secrets", "k8s-secrets", "control-plane"] },
         { title: "Migrate and roll out", text: "The init job migrates the database and creates the first admin; deployments roll out; running jobs are handed over gracefully.", nodes: ["init", "sql", "gateway", "api", "worker", "sync"] }
@@ -414,7 +415,7 @@ const ARCHITECTURE_DATA = {
         { title: "Download encrypted", text: "The API streams the package encrypted with the administrator's passphrase (AES-256-GCM, scrypt); the passphrase is never stored. The file is kept outside the platform.", nodes: ["gcs", "api", "gateway", "browser", "offsite"] },
         { title: "Rebuild", text: "A new platform is deployed from the repository: Terraform, deploy.sh, migrations, the first administrator.", nodes: ["tooling", "control-plane", "registry", "init", "sql"] },
         { title: "Upload and check", text: "The administrator uploads the file with its passphrase; the API decrypts it and checks the format and schema version before anything is replaced.", nodes: ["offsite", "browser", "api", "gcs"] },
-        { title: "Restore", text: "backup.restore writes the objects, replaces every backed-up table in one transaction, removes what the backup lacks and signs everyone out.", nodes: ["worker", "sql", "gcs", "queue"] },
+        { title: "Restore", text: "backup.restore streams the package into Cloud Storage, replaces every backed-up table in one transaction, removes what the backup lacks and signs everyone out. A move to another Google Cloud project is exactly this: a fresh deployment there plus a restore, with the old one left untouched; users keep their accounts and passwords.", nodes: ["worker", "sql", "gcs", "queue"] },
         { title: "Re-sync", text: "The documentation re-syncs and the index rebuilds by themselves; source credentials and tunnel access are set up again.", nodes: ["sync", "nat", "src-techdocs", "worker", "index-cache"] }
       ]
     },
