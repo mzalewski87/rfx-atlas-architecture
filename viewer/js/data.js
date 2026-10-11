@@ -443,19 +443,48 @@ const ARCHITECTURE_DATA = {
       ]
     }
     ,{
-      id: "flow-gateway", name: "11. Model calls through the AI Gateway (optional)", color: "#14B8A6",
-      description: "The same models, reached through Prisma AIRS AI Gateway for chosen tasks — with a response cache.",
+      id: "flow-model-native", name: "11. Model call — native (default)", color: "#64748B",
+      description: "How every task calls a model unless an administrator switches it: straight to Vertex AI.",
       steps: [
-        { title: "Configure once", text: "An administrator sets the gateway URL, how it reaches Vertex AI and the cache policy, and pastes the API key; the key goes to Secret Manager write-only. Test connection calls each gateway model once.", nodes: ["browser", "api", "secrets", "worker", "ai-gateway"] },
-        { title: "Switch a task", text: "In model routing a task's connection changes from native to the gateway, optionally with the cache; every other task stays native. EU-resident cases always use the native connection.", nodes: ["browser", "api", "sql"] },
-        { title: "Call", text: "The worker masks the case's redaction terms, reads the key and calls the gateway: Claude on /v1/messages, Gemini on /v1/chat/completions; the call is logged with tokens and cost.", nodes: ["worker", "secrets", "ai-gateway"] },
-        { title: "Cache or model", text: "A repeated prompt — an evaluation run again — is answered from the gateway's cache (Redis); otherwise the gateway forwards it to Claude or Gemini on Vertex AI under its policies.", nodes: ["ai-gateway", "claude", "gemini"] }
+        { title: "Prepare", text: "The worker builds the prompt for one requirement and masks the case's redaction terms.", nodes: ["worker", "sql"] },
+        { title: "Vertex AI", text: "It calls Claude (or Gemini) on Vertex AI with its Workload Identity: no key, no intermediary.", nodes: ["worker", "wi", "claude"] },
+        { title: "Every call billed", text: "A repeated prompt — the same requirement graded again — is a new model call, logged with its tokens and cost.", nodes: ["claude", "worker", "sql"] }
+      ]
+    },
+    {
+      id: "flow-model-gateway", name: "12. Model call — through the AI Gateway (cache miss)", color: "#14B8A6",
+      description: "The same call for a task switched to Prisma AIRS AI Gateway: the first time a prompt is seen.",
+      steps: [
+        { title: "Configured once", text: "An administrator set the gateway URL, how it reaches Vertex AI and the cache policy, and the API key (write-only in Secret Manager); model routing switched this task to the gateway with Cache ticked. EU-resident cases still go native.", nodes: ["browser", "api", "secrets", "sql"] },
+        { title: "To the gateway", text: "The worker masks redaction terms, reads the key and calls the gateway: Claude on /v1/messages, Gemini on /v1/chat/completions, with the cache policy in x-portkey-config.", nodes: ["worker", "secrets", "ai-gateway"] },
+        { title: "Cache miss", text: "The gateway has not seen this prompt: it applies its policies and forwards it to the model on Vertex AI (x-portkey-cache-status: MISS).", nodes: ["ai-gateway", "claude", "gemini"] },
+        { title: "Stored", text: "The answer returns through the gateway, which keeps it in its cache (Redis) for the configured lifetime; the platform logs the call with its tokens and cost.", nodes: ["claude", "ai-gateway", "worker", "sql"] }
+      ]
+    },
+    {
+      id: "flow-model-cache-hit", name: "13. Model call — cache hit on the AI Gateway", color: "#22C55E",
+      description: "The same prompt again — an evaluation re-run by mistake or on purpose: answered from the cache.",
+      steps: [
+        { title: "Same prompt", text: "The evaluation runs again; the worker sends a prompt identical to one the gateway has answered.", nodes: ["worker", "ai-gateway"] },
+        { title: "Cache hit", text: "The gateway answers from its cache (x-portkey-cache-status: HIT) in a fraction of a second; no model on Vertex AI is called.", nodes: ["ai-gateway"] },
+        { title: "Not billed", text: "The platform records the call as answered from the cache: left out of the cost, counted on the dashboard as what the cache saved.", nodes: ["ai-gateway", "worker", "sql", "browser"] }
       ]
     }
   ],
 
   // -------------------------------------------------------------- scenarios ---
   scenarios: [
+    {
+      id: "scn-gateway-cache", tag: "AI Gateway", name: "Evaluation re-run through the AI Gateway",
+      description: "The evaluation task is switched to Prisma AIRS AI Gateway with the cache; the same evaluation runs twice, then the gateway becomes unreachable.",
+      steps: [
+        { phase: "First run", status: "normal", message: "Every requirement is a cache miss: the gateway forwards each prompt to Claude on Vertex AI and stores the answer; cost as with the native connection.", affectedNodes: ["worker", "ai-gateway", "claude"] },
+        { phase: "Run again", status: "action", message: "The same requirements are graded again: identical prompts are cache hits, answered by the gateway in a fraction of a second without calling the model.", affectedNodes: ["worker", "ai-gateway"] },
+        { phase: "Saved", status: "restored", message: "The dashboard leaves the cached calls out of the cost and shows what the cache saved.", affectedNodes: ["sql", "browser"] },
+        { phase: "Gateway unreachable", status: "failure", message: "Calls routed through the gateway fail and are recorded as needing verification; native tasks are unaffected.", affectedNodes: ["ai-gateway", "worker"] },
+        { phase: "Back to native", status: "restored", message: "An administrator switches the task back to the native connection — one setting, no redeploy — and re-evaluates the affected requirements.", affectedNodes: ["browser", "api", "worker", "claude"] }
+      ]
+    },
     {
       id: "scn-rebuild", tag: "Disaster recovery", name: "Platform rebuilt from scratch",
       description: "The whole environment is gone — cluster, database, bucket — and the platform must come back as it was.",
