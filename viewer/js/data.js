@@ -78,7 +78,8 @@ const ARCHITECTURE_DATA = {
     { id: "registry", x: 1150, y: 520, w: 250, h: 72, icon: "registry", title: "Artifact Registry", sub: "app · gateway · sync images" },
     { id: "wi", x: 1420, y: 520, w: 250, h: 72, icon: "iam", title: "Workload Identity", sub: "SA per workload · no keys" },
     { id: "gemini", x: 1150, y: 660, w: 250, h: 72, icon: "gemini", title: "Vertex AI — Gemini", sub: "2.5 in EU · 3.x on global", badge: "EU+G" },
-    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5.5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" }
+    { id: "claude", x: 1420, y: 660, w: 250, h: 72, icon: "claude", title: "Vertex AI — Claude", sub: "Sonnet 5.5 · Opus 5.5 · global", badge: "GLOBAL", badgeClass: "warn-bg" },
+    { id: "ai-gateway", x: 1150, y: 800, w: 520, h: 72, icon: "shield", title: "Prisma AIRS AI Gateway (Portkey)", sub: "optional, per task · response cache (Redis) · SaaS or hybrid", badge: "OPT" }
   ],
 
   // ------------------------------------------------------------------ links ---
@@ -104,6 +105,11 @@ const ARCHITECTURE_DATA = {
     { from: "worker-interactive", to: "index-cache", cls: "data" },
     { from: "worker-interactive", to: "claude", cls: "ai" },
     { from: "worker-interactive", to: "gemini", cls: "ai" },
+    { from: "worker", to: "ai-gateway", cls: "ai" },
+    { from: "worker-interactive", to: "ai-gateway", cls: "ai" },
+    { from: "ai-gateway", to: "claude", cls: "ai" },
+    { from: "ai-gateway", to: "gemini", cls: "ai" },
+    { from: "worker", to: "secrets", cls: "secret" },
     { from: "api", to: "secrets", cls: "secret" },
     { from: "sync", to: "secrets", cls: "secret" },
     { from: "sync", to: "nat", cls: "egress" },
@@ -125,6 +131,7 @@ const ARCHITECTURE_DATA = {
     { id: "gke", label: "☸️ GKE workloads", focus: "zone-gke", zoom: 1.25, select: "worker" },
     { id: "data", label: "🗄️ Data & secrets", focus: "zone-psa", zoom: 1.05, select: "queue" },
     { id: "ai", label: "✨ Vertex AI", focus: "claude", zoom: 1.35, select: "claude" },
+    { id: "gw", label: "🛡️ AI Gateway", focus: "ai-gateway", zoom: 1.35, select: "ai-gateway" },
     { id: "sources", label: "📚 Documentation sync", focus: "zone-sources", zoom: 1.1, select: "sync" },
     { id: "access", label: "🔐 Access path", focus: "tunnel", zoom: 1.3, select: "tunnel" }
   ],
@@ -307,6 +314,11 @@ const ARCHITECTURE_DATA = {
       summary: "OCR of scanned pages (verbatim transcription in the source language), in the EU region — and every model task of an EU-resident case: routes whose endpoint is outside the EU switch automatically to Gemini here, including the assistant's tool loop.",
       details: { "OCR (default)": "gemini-3.5-flash-lite → gemini-3.8-flash, global endpoint (Gemini 3.x is served only there)", "EU-resident / anonymised cases": "OCR gemini-2.5-flash → 2.5-pro; gemini-2.5-pro for segmentation, judge, evaluation, assistant; 2.5-flash for translation — europe-west4", "Gemma": "not offered as a managed Vertex AI endpoint" }
     },
+    "ai-gateway": {
+      name: "Prisma AIRS AI Gateway (Portkey)", category: "Models (optional path)", icon: "shield",
+      summary: "An optional path to the same Vertex AI models: an administrator configures the gateway once and switches chosen tasks from the native connection to the gateway — for the gateway's policies, observability and response cache. Native Vertex AI stays the default; EU-resident cases always go native.",
+      details: { "Where": "managed (SaaS, aigw.portkey.ai) or hybrid (data plane in your own Kubernetes cluster)", "Claude": "Anthropic-compatible /v1/messages, model anthropic.<id>", "Gemini": "OpenAI-compatible /v1/chat/completions (the assistant's tools translated)", "Vertex AI credentials": "held by the gateway (Model Catalog provider) or passed through (the worker's Workload Identity token)", "Cache": "per task: repeated prompts, e.g. a re-run evaluation, answered from the gateway's cache (Redis); simple or semantic, configurable lifetime", "Key": "write-only secret in Secret Manager, read only by the worker", "Privacy": "redaction terms masked before any request leaves the platform; every call logged with tokens and cost" }
+    },
     claude: {
       name: "Vertex AI — Claude", category: "Models", icon: "claude",
       summary: "Segmentation, translation, judge, evaluation and the assistant for cases without the EU-residency flag. Runs on the global endpoint until EU quota is available — requests may be processed outside the EU. Routing is a setting, switchable without a release.",
@@ -428,6 +440,16 @@ const ARCHITECTURE_DATA = {
         { title: "Answers and re-grading", text: "The customer's filled questionnaire is imported; the answered requirements are graded again with the answer as context. Answers never become knowledge.", nodes: ["browser", "api", "worker", "sql"] },
         { title: "Business status", text: "An owner moves the case to awaiting customer reply, final answer sent, won, lost or archived — always with a comment, kept as history.", nodes: ["browser", "api", "sql"] },
         { title: "Dashboard", text: "Cases by status and step, users online (session activity in the last 5 minutes) and the live load of each worker pool, refreshed every 10 seconds; model tokens and cost month to date, per case and per model, from the logged calls and a dated price table.", nodes: ["browser", "api", "sql", "queue"] }
+      ]
+    }
+    ,{
+      id: "flow-gateway", name: "11. Model calls through the AI Gateway (optional)", color: "#14B8A6",
+      description: "The same models, reached through Prisma AIRS AI Gateway for chosen tasks — with a response cache.",
+      steps: [
+        { title: "Configure once", text: "An administrator sets the gateway URL, how it reaches Vertex AI and the cache policy, and pastes the API key; the key goes to Secret Manager write-only. Test connection calls each gateway model once.", nodes: ["browser", "api", "secrets", "worker", "ai-gateway"] },
+        { title: "Switch a task", text: "In model routing a task's connection changes from native to the gateway, optionally with the cache; every other task stays native. EU-resident cases always use the native connection.", nodes: ["browser", "api", "sql"] },
+        { title: "Call", text: "The worker masks the case's redaction terms, reads the key and calls the gateway: Claude on /v1/messages, Gemini on /v1/chat/completions; the call is logged with tokens and cost.", nodes: ["worker", "secrets", "ai-gateway"] },
+        { title: "Cache or model", text: "A repeated prompt — an evaluation run again — is answered from the gateway's cache (Redis); otherwise the gateway forwards it to Claude or Gemini on Vertex AI under its policies.", nodes: ["ai-gateway", "claude", "gemini"] }
       ]
     }
   ],
