@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-12g"
+    lastReviewed: "2026-10-12h"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -49,7 +49,7 @@ const ARCHITECTURE_DATA = {
 
     { id: "src-techdocs", x: 1012, y: 78, w: 168, h: 46, icon: "docs", title: "techdocs", sub: "docs.paloaltonetworks.com" },
     { id: "src-gitbook", x: 1186, y: 78, w: 168, h: 46, icon: "gitbook", title: "Cortex GitBook", sub: "Cortex / Cortex Cloud" },
-    { id: "src-pandev", x: 1360, y: 78, w: 168, h: 46, icon: "docs", title: "pan.dev · Mintlify", sub: "pan.dev · Portkey · XCOR" },
+    { id: "src-pandev", x: 1360, y: 78, w: 168, h: 46, icon: "docs", title: "pan.dev · Mintlify", sub: "Docusaurus · Portkey · XCOR" },
     { id: "src-idira", x: 1534, y: 78, w: 168, h: 46, icon: "lock", title: "Idira docs", sub: "vendor module · off" },
     { id: "src-github", x: 1012, y: 132, w: 168, h: 46, icon: "github", title: "GitHub (P2)", sub: "PANW · cyberark" },
     { id: "src-koi", x: 1186, y: 132, w: 168, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
@@ -63,7 +63,7 @@ const ARCHITECTURE_DATA = {
     { id: "worker", x: 570, y: 455, w: 250, h: 64, icon: "worker", title: "worker", sub: "analysis · OCR · translation · index", badge: "×2" },
     { id: "netpol", x: 90, y: 575, w: 220, h: 64, icon: "shield", title: "NetworkPolicy", sub: "default-deny · gateway→api" },
     { id: "init", x: 330, y: 575, w: 220, h: 64, icon: "job", title: "init job", sub: "migrations · first admin" },
-    { id: "sync", x: 570, y: 575, w: 250, h: 64, icon: "sync", title: "sync", sub: "doc sync · headless browser", badge: "×2" },
+    { id: "sync", x: 570, y: 575, w: 250, h: 64, icon: "sync", title: "sync", sub: "engine modules · doc sync · Koi browser", badge: "×4" },
     { id: "k8s-secrets", x: 90, y: 700, w: 220, h: 64, icon: "key", title: "Kubernetes Secrets", sub: "DB URL · admin password" },
     { id: "index-cache", x: 330, y: 700, w: 220, h: 64, icon: "index", title: "BM25 index", sub: "in memory · hot reload" },
     { id: "worker-interactive", x: 570, y: 700, w: 250, h: 64, icon: "worker", title: "worker-interactive", sub: "renders · chat · file intake", badge: "×2" },
@@ -74,7 +74,7 @@ const ARCHITECTURE_DATA = {
     { id: "queue", x: 430, y: 900, w: 320, h: 72, icon: "queue", title: "Job queue + event log", sub: "SKIP LOCKED · heartbeats · SSE source" },
     { id: "backups", x: 770, y: 900, w: 300, h: 72, icon: "sql", title: "Database backups", sub: "daily + PITR, inside the project" },
 
-    { id: "gcs", x: 1150, y: 410, w: 250, h: 72, icon: "gcs", title: "Cloud Storage", sub: "files · corpus · outputs · index" },
+    { id: "gcs", x: 1150, y: 410, w: 250, h: 72, icon: "gcs", title: "Cloud Storage", sub: "files · corpus · outputs · index · engines" },
     { id: "secrets", x: 1420, y: 410, w: 250, h: 72, icon: "secret", title: "Secret Manager", sub: "DB · admin · Koi (write-only)" },
     { id: "registry", x: 1150, y: 520, w: 250, h: 72, icon: "registry", title: "Artifact Registry", sub: "app · gateway · sync images" },
     { id: "wi", x: 1420, y: 520, w: 250, h: 72, icon: "iam", title: "Workload Identity", sub: "SA per workload · no keys" },
@@ -176,17 +176,17 @@ const ARCHITECTURE_DATA = {
     "src-techdocs": {
       name: "techdocs (docs.paloaltonetworks.com)", category: "Documentation source · P1", icon: "docs",
       summary: "Official product documentation, including Hardware Reference books (dimensions, power, interfaces, certifications) tagged by hardware family.",
-      details: { "Diff key": "sitemap lastmod", "Schedule": "daily", "Size": "~20k pages", "Rate": "~1 request/s, identifying User-Agent" }
+      details: { "Engine": "techdocs-aem 1.0.0 (built-in module)", "Diff key": "sitemap lastmod", "Schedule": "daily", "Size": "~20k pages", "Rate": "~1 request/s, identifying User-Agent" }
     },
     "src-gitbook": {
       name: "Cortex documentation (GitBook)", category: "Documentation source · P1", icon: "gitbook",
       summary: "Cortex XSIAM, XDR, XSOAR, Xpanse and Cortex Cloud documentation from the GitBook portal (Markdown source per page).",
-      details: { "Diff key": "per-space sitemap lastmod", "Schedule": "daily", "Special case": "HTTP 200 'Page Not Found' pages detected and skipped" }
+      details: { "Engine": "gitbook 1.0.0 (built-in module)", "Diff key": "per-space sitemap lastmod", "Schedule": "daily", "Special case": "HTTP 200 'Page Not Found' pages detected and skipped" }
     },
     "src-pandev": {
       name: "pan.dev, Portkey and Cortex XCOR", category: "Documentation source · P1", icon: "docs",
       summary: "Developer documentation (pan.dev), AI-gateway documentation (Portkey) and Cortex XCOR documentation (formerly Chronosphere). Portkey and XCOR are Mintlify sites read as Markdown source.",
-      details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
+      details: { "Engines": "docusaurus 1.0.0 (pan.dev), mintlify 1.0.0 (Portkey, XCOR) — built-in modules", "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
     },
     "src-idira": {
       name: "Idira documentation (formerly CyberArk)", category: "Documentation source · P1 (off, approval required)", icon: "lock",
@@ -196,12 +196,12 @@ const ARCHITECTURE_DATA = {
     "src-github": {
       name: "GitHub — PaloAltoNetworks and cyberark", category: "Documentation source · P2", icon: "github",
       summary: "OpenAPI specifications and AIRS repositories from PaloAltoNetworks; Markdown of curated Idira product repositories from the cyberark organisation (Secrets Manager / Conjur, PAM API scripts, cloud deployment, Ansible collection, platform SDK). Supporting evidence below official documentation.",
-      details: { "Tier": "P2", "Diff key": "git blob SHA", "Schedule": "daily 03:40" }
+      details: { "Engine": "github 1.0.0 (built-in module; optional token attached by the host)", "Tier": "P2", "Diff key": "git blob SHA", "Schedule": "daily 03:40" }
     },
     "src-koi": {
       name: "Koi documentation", category: "Documentation source · P1 (authenticated)", icon: "lock",
       summary: "Requires a user account. The sync workload signs in with a headless browser using credentials an administrator entered (write-only). Multi-factor or CAPTCHA steps are never bypassed — a session cookie can be supplied instead.",
-      details: { "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
+      details: { "Engine": "gitbook 1.0.0 with the session the platform holds (the module never sees credentials)", "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
     },
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
@@ -563,6 +563,16 @@ const ARCHITECTURE_DATA = {
       ]
     },
     {
+      id: "scn-engine-fallback", tag: "Engine module", name: "Uploaded engine version fails during a sync",
+      description: "An administrator activated an externally built engine version on a source; in the nightly sync the module crashes.",
+      steps: [
+        { phase: "Crash", status: "failure", message: "The uploaded module fails in its own process (defect, hang or a bundle that cannot be loaded); the platform process is unaffected.", affectedNodes: ["sync"] },
+        { phase: "Fallback", status: "action", message: "The same run is finished by the built-in version of the engine with the same doc_id scheme, so stored pages keep their keys and nothing is deleted.", affectedNodes: ["sync", "nat", "src-pandev"] },
+        { phase: "Reported", status: "action", message: "The job result names the failed version, the version used and the reason; the source shows 'built-in engine used' and the engine history records it.", affectedNodes: ["sync", "sql", "api", "browser"] },
+        { phase: "Decision", status: "restored", message: "The binding is unchanged: the administrator rolls back or switches the source and the supplier ships a fix as a new version.", affectedNodes: ["browser", "api", "sql"] }
+      ]
+    },
+    {
       id: "scn-tunnel", tag: "Client", name: "Tunnel or network drops",
       description: "The engineer's connection or the port-forward breaks.",
       steps: [
@@ -609,7 +619,7 @@ const ARCHITECTURE_DATA = {
     { title: "2. No public endpoint", focus: "tunnel", zoom: 1.35, content: `
       <p>There is no Ingress, load balancer or public IP. Engineers reach the UI with <code>kubectl port-forward</code> through the GKE <strong>DNS endpoint</strong>, authorised by Google IAM. Nodes are private; Cloud SQL has a private IP only.</p>` },
     { title: "3. Five workloads, one queue", focus: "zone-gke", zoom: 1.25, content: `
-      <ul><li><strong>gateway</strong> — UI and /api proxy (same origin).</li><li><strong>api</strong> — REST, event stream, access control; no model permission.</li><li><strong>worker</strong> ×2 — the analysis pipeline, translation, index builds.</li><li><strong>worker-interactive</strong> ×2 — document renders, assistant turns, file intake, so they never wait behind an analysis.</li><li><strong>sync</strong> ×2 — documentation mirroring.</li></ul>
+      <ul><li><strong>gateway</strong> — UI and /api proxy (same origin).</li><li><strong>api</strong> — REST, event stream, access control; no model permission.</li><li><strong>worker</strong> ×2 — the analysis pipeline, translation, index builds.</li><li><strong>worker-interactive</strong> ×2 — document renders, assistant turns, file intake, so they never wait behind an analysis.</li><li><strong>sync</strong> ×4 — documentation mirroring through versioned engine modules, engine verification and dry runs.</li></ul>
       <p>They coordinate through a PostgreSQL job queue (SKIP LOCKED, heartbeats) and an event log streamed to browsers.</p>` },
     { title: "4. Least privilege", focus: "wi", zoom: 1.35, content: `
       <p>One service account per workload via Workload Identity — no keys. Only the workers (worker, worker-interactive) and sync may call Vertex AI. Koi credentials are write-only through the API and readable only by sync. Inside the namespace, a default-deny NetworkPolicy lets only the gateway reach the API.</p>` },
@@ -618,7 +628,7 @@ const ARCHITECTURE_DATA = {
     { title: "6. Models and data residency", focus: "claude", zoom: 1.35, content: `
       <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. A case flagged <strong>EU data residency</strong> switches automatically: every task whose model runs outside the EU uses Gemini 2.5 in europe-west4 instead. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
     { title: "7. Official knowledge, politely", focus: "zone-sources", zoom: 1.1, content: `
-      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Every source syncs nightly from 03:00; datasheet pages feed a catalogue checked daily, with new datasheets flagged for review; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
+      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Each source is read by a versioned engine module (one per documentation system) in its own process; the platform owns the transport, so these rules hold for every engine, including ones uploaded by external teams — accepted by an administrator, tried in a dry run, rolled back in one click, with the built-in version finishing any run an uploaded one fails. Every source syncs nightly from 03:00; datasheet pages feed a catalogue checked daily, with new datasheets flagged for review; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `
       <p>Deploys hand running jobs over gracefully; lost workers are detected by heartbeats; evaluations and syncs resume where they stopped; one failed model call never sinks a run. See the Failure Simulator tab.</p>` },
     { title: "9. Reproducible deployment", focus: "tooling", zoom: 1.35, content: `
