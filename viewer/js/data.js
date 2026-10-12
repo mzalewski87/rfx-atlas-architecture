@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-11"
+    lastReviewed: "2026-10-12c"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -47,12 +47,13 @@ const ARCHITECTURE_DATA = {
     { id: "tooling", x: 490, y: 85, w: 165, h: 64, icon: "tooling", title: "Deploy tooling", sub: "terraform · docker" },
     { id: "offsite", x: 675, y: 85, w: 280, h: 64, icon: "lock", title: "Off-platform backup", sub: "encrypted .rfxbak + passphrase" },
 
-    { id: "src-techdocs", x: 1015, y: 78, w: 222, h: 46, icon: "docs", title: "techdocs", sub: "docs.paloaltonetworks.com" },
-    { id: "src-gitbook", x: 1244, y: 78, w: 222, h: 46, icon: "gitbook", title: "Cortex GitBook", sub: "Cortex / Cortex Cloud" },
-    { id: "src-pandev", x: 1473, y: 78, w: 222, h: 46, icon: "docs", title: "pan.dev + Portkey", sub: "developer & AI gateway docs" },
-    { id: "src-github", x: 1015, y: 132, w: 222, h: 46, icon: "github", title: "GitHub (P2)", sub: "OpenAPI specifications" },
-    { id: "src-koi", x: 1244, y: 132, w: 222, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
-    { id: "src-www", x: 1473, y: 132, w: 222, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet catalogue · authorised PDFs" },
+    { id: "src-techdocs", x: 1012, y: 78, w: 168, h: 46, icon: "docs", title: "techdocs", sub: "docs.paloaltonetworks.com" },
+    { id: "src-gitbook", x: 1186, y: 78, w: 168, h: 46, icon: "gitbook", title: "Cortex GitBook", sub: "Cortex / Cortex Cloud" },
+    { id: "src-pandev", x: 1360, y: 78, w: 168, h: 46, icon: "docs", title: "pan.dev · Mintlify", sub: "pan.dev · Portkey · XCOR" },
+    { id: "src-idira", x: 1534, y: 78, w: 168, h: 46, icon: "lock", title: "Idira docs", sub: "off · approval recorded" },
+    { id: "src-github", x: 1012, y: 132, w: 168, h: 46, icon: "github", title: "GitHub (P2)", sub: "PANW · cyberark" },
+    { id: "src-koi", x: 1186, y: 132, w: 168, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
+    { id: "src-www", x: 1360, y: 132, w: 342, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet catalogue · authorised PDFs" },
 
     { id: "control-plane", x: 60, y: 272, w: 300, h: 56, icon: "control", title: "GKE control plane", sub: "DNS endpoint · IAM-authorised" },
     { id: "iam-user", x: 380, y: 272, w: 260, h: 56, icon: "iam", title: "Cloud IAM", sub: "user roles gate kubectl & secrets" },
@@ -115,6 +116,7 @@ const ARCHITECTURE_DATA = {
     { from: "sync", to: "nat", cls: "egress" },
     { from: "nat", to: "src-techdocs", cls: "egress" },
     { from: "nat", to: "src-koi", cls: "egress" },
+    { from: "nat", to: "src-idira", cls: "egress" },
     { from: "tooling", to: "control-plane", cls: "deploy" },
     { from: "tooling", to: "registry", cls: "deploy" },
     { from: "registry", to: "worker", cls: "deploy" },
@@ -182,14 +184,19 @@ const ARCHITECTURE_DATA = {
       details: { "Diff key": "per-space sitemap lastmod", "Schedule": "daily", "Special case": "HTTP 200 'Page Not Found' pages detected and skipped" }
     },
     "src-pandev": {
-      name: "pan.dev and Portkey", category: "Documentation source · P1", icon: "docs",
-      summary: "Developer documentation (pan.dev) and AI-gateway documentation (Portkey).",
-      details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20" }
+      name: "pan.dev, Portkey and Cortex XCOR", category: "Documentation source · P1", icon: "docs",
+      summary: "Developer documentation (pan.dev), AI-gateway documentation (Portkey) and Cortex XCOR documentation (formerly Chronosphere). Portkey and XCOR are Mintlify sites read as Markdown source.",
+      details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
+    },
+    "src-idira": {
+      name: "Idira documentation (CyberArk) via vendor module", category: "Documentation source · P1 (off, approval and credentials required)", icon: "lock",
+      summary: "Identity security documentation. The network layer is a vendor module shipped by CyberArk engineering (cyberark-rfx-docs-sync, installed into the sync image only, pinned by version). RFx Atlas treats it as a lister/fetcher behind a SecretProvider interface and routes every page through the registry. Off by default: an administrator switches it on with the basis of the site owner's approval (recorded with who and when) and writes the module's credentials through a write-only endpoint (Secret Manager; never echoed back). If the module cannot establish a session the sync fails loudly with access denied.",
+      details: { "Vendor module": "cyberark-rfx-docs-sync, pinned by version, from deploy/vendor/", "Credentials": "api_token / proxy_url / ca_cert / base_url / audit_log_path, write-only, under rfx-atlas-idira-*", "Rate": "capped at 0.5 requests/s on both ends", "Failure state": "blocked, source.access_denied", "Schedule": "weekly (Sunday 04:15)" }
     },
     "src-github": {
-      name: "GitHub — PaloAltoNetworks", category: "Documentation source · P2", icon: "github",
-      summary: "OpenAPI specifications from official repositories; supporting evidence below official documentation.",
-      details: { "Tier": "P2", "Schedule": "manual" }
+      name: "GitHub — PaloAltoNetworks and cyberark", category: "Documentation source · P2", icon: "github",
+      summary: "OpenAPI specifications and AIRS repositories from PaloAltoNetworks; Markdown of curated Idira product repositories from the cyberark organisation (Secrets Manager / Conjur, PAM API scripts, cloud deployment, Ansible collection, platform SDK). Supporting evidence below official documentation.",
+      details: { "Tier": "P2", "Diff key": "git blob SHA", "Schedule": "daily 03:40" }
     },
     "src-koi": {
       name: "Koi documentation", category: "Documentation source · P1 (authenticated)", icon: "lock",
@@ -243,8 +250,8 @@ const ARCHITECTURE_DATA = {
     },
     sync: {
       name: "sync", category: "Workload", icon: "sync",
-      summary: "Documentation synchronisation only. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source.",
-      details: { "Replicas": "2 (two sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod" }
+      summary: "Documentation synchronisation only. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
+      details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod" }
     },
     "k8s-secrets": {
       name: "Kubernetes Secrets", category: "Kubernetes", icon: "key",
@@ -384,8 +391,8 @@ const ARCHITECTURE_DATA = {
       description: "A tool-using model loop that runs in worker-interactive; the API only relays the stream.",
       steps: [
         { title: "Message", text: "POST to the chat session (general or per case; access to the case is checked). The API queues chat.turn and keeps the response open as a stream.", nodes: ["browser", "api", "queue"] },
-        { title: "Tool loop", text: "worker-interactive runs Claude (Gemini function calling for EU-resident cases) with tools: search_knowledge (hardware-aware), case_overview, requirement_verdict, list_requirements (bulk), web_search (Gemini with Google Search grounding, unofficial; off for EU-resident and anonymised cases), propose_memory, propose_override — up to 20 steps, then an answer from what was gathered.", nodes: ["worker-interactive", "claude", "gemini", "index-cache", "sql"] },
-        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval.", nodes: ["worker-interactive", "queue", "api", "browser"] }
+        { title: "Tool loop", text: "worker-interactive runs Claude (Gemini function calling for EU-resident cases) with tools: search_knowledge (hardware-aware), case_overview, requirement_verdict, list_requirements (bulk), web_search (Gemini with Google Search grounding, unofficial; off for EU-resident and anonymised cases), propose_memory, propose_override, generate_report (a downloadable XLSX/PDF — the conversation or a model-composed report) — up to 20 steps, then an answer from what was gathered. Files the engineer attached to the conversation (extracted at upload) are given to the model as context.", nodes: ["worker-interactive", "claude", "gemini", "index-cache", "sql"] },
+        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval; a generated report appears as a download. A case conversation inherits the case's residency and redaction; a general one does not.", nodes: ["worker-interactive", "queue", "api", "browser"] }
       ]
     },
     {
@@ -568,6 +575,16 @@ const ARCHITECTURE_DATA = {
         { phase: "Challenge", status: "failure", message: "The headless sign-in meets a challenge it must not bypass.", affectedNodes: ["src-koi", "sync"] },
         { phase: "Flagged", status: "action", message: "The source becomes auth_required with the reason; other sources are unaffected.", affectedNodes: ["sync", "sql"] },
         { phase: "Session cookie", status: "restored", message: "An administrator pastes a session cookie (write-only); the next sync uses it.", affectedNodes: ["browser", "api", "secrets", "sync"] }
+      ]
+    },
+    {
+      id: "scn-idira-refused", tag: "Approved source", name: "Idira documentation refuses the client",
+      description: "The source is approved and switched on, but the site still answers automated clients with a 'Page not found' page.",
+      steps: [
+        { phase: "Approval", status: "action", message: "An administrator switches the source on, entering the basis of the site owner's approval; it is recorded with their name and the time.", affectedNodes: ["browser", "api", "sql"] },
+        { phase: "Probe", status: "failure", message: "The weekly sync probes the portal page first and gets the 'Page not found' answer.", affectedNodes: ["sync", "nat", "src-idira"] },
+        { phase: "Reported", status: "action", message: "The job fails with source.access_denied and the source shows blocked; no browser emulation, borrowed cookies or other identity is tried. Other sources are unaffected.", affectedNodes: ["sync", "sql"] },
+        { phase: "Allowed", status: "restored", message: "Once the site owner allows the platform's User-Agent or outbound address, the next sync crawls at most 0.5 requests/s and the index is rebuilt.", affectedNodes: ["sync", "src-idira", "gcs"] }
       ]
     }
   ],
