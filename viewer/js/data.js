@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-12c"
+    lastReviewed: "2026-10-12d"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -189,9 +189,9 @@ const ARCHITECTURE_DATA = {
       details: { "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
     },
     "src-idira": {
-      name: "Idira documentation (CyberArk) via vendor module", category: "Documentation source · P1 (off, approval and credentials required)", icon: "lock",
-      summary: "Identity security documentation. The network layer is a vendor module shipped by CyberArk engineering (cyberark-rfx-docs-sync, installed into the sync image only, pinned by version). RFx Atlas treats it as a lister/fetcher behind a SecretProvider interface and routes every page through the registry. Off by default: an administrator switches it on with the basis of the site owner's approval (recorded with who and when) and writes the module's credentials through a write-only endpoint (Secret Manager; never echoed back). If the module cannot establish a session the sync fails loudly with access denied.",
-      details: { "Vendor module": "cyberark-rfx-docs-sync, pinned by version, from deploy/vendor/", "Credentials": "api_token / proxy_url / ca_cert / base_url / audit_log_path, write-only, under rfx-atlas-idira-*", "Rate": "capped at 0.5 requests/s on both ends", "Failure state": "blocked, source.access_denied", "Schedule": "weekly (Sunday 04:15)" }
+      name: "Idira documentation (formerly CyberArk)", category: "Documentation source · P1 (off, approval required)", icon: "lock",
+      summary: "Identity security documentation. Off by default: an administrator switches it on only with the basis of the site owner's approval, recorded with who and when. The site refused automated clients when the source was built; the sync then fails with access denied and does not try to get around it — access comes from the site owner allowing the platform's client.",
+      details: { "Discovery": "site sitemap when published, else a bounded crawl from the portal page (current version, English)", "Rate": "at most 0.5 requests/s, identifying User-Agent, robots.txt honoured", "Failure state": "blocked, source.access_denied", "Incomplete crawl": "never treated as deletions", "Schedule": "weekly (Sunday 04:15)" }
     },
     "src-github": {
       name: "GitHub — PaloAltoNetworks and cyberark", category: "Documentation source · P2", icon: "github",
