@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-12e"
+    lastReviewed: "2026-10-12g"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -231,7 +231,7 @@ const ARCHITECTURE_DATA = {
     worker: {
       name: "worker", category: "Workload", icon: "worker",
       summary: "Claims every job kind except documentation sync from the PostgreSQL queue: OCR, segmentation, judge, evaluation, hardware sizing (appliances and VM-Series credits), translation of generated text, search-index builds and platform backups and restores (and short jobs when idle). With worker-interactive and sync, the only workloads allowed to call Vertex AI.",
-      details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "scheduler (Europe/Warsaw: syncs from 03:00, datasheet catalogue 05:00, automatic backup 05:30; one run per slot under a row lock) + orphaned-job reaper" }
+      details: { "Replicas": "2 (two analyses at once; scale on queue depth next)", "Resources": "500m CPU / 1–2 Gi", "Excludes": "source.sync and engine jobs", "Evaluation": "4 requirements in parallel, resumable", "Shutdown": "SIGTERM → stop between items, requeue (120 s grace)", "Also runs": "scheduler (Europe/Warsaw: syncs from 03:00, datasheet catalogue 05:00, automatic backup 05:30; one run per slot under a row lock) + orphaned-job reaper" }
     },
     "worker-interactive": {
       name: "worker-interactive", category: "Workload", icon: "worker",
@@ -250,8 +250,8 @@ const ARCHITECTURE_DATA = {
     },
     sync: {
       name: "sync", category: "Workload", icon: "sync",
-      summary: "Documentation synchronisation only. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
-      details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi and Idira module secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod" }
+      summary: "Documentation synchronisation and engine jobs. Each source is read by a versioned engine module (one per documentation system) running in its own process; the platform owns the transport, so identity, robots.txt, declared hosts and rate limits are enforced by the host, not by the module. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
+      details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi and Idira module secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod", "Job kinds": "source.sync, engine.verify, engine.dry_run", "Engines": "built-in bundles verified at image build; the built-in catalogue is published to the bucket at start for the API" }
     },
     "k8s-secrets": {
       name: "Kubernetes Secrets", category: "Kubernetes", icon: "key",
@@ -270,7 +270,7 @@ const ARCHITECTURE_DATA = {
     },
     sql: {
       name: "Cloud SQL — PostgreSQL 16", category: "Data", icon: "sql",
-      summary: "System of record: users, cases, members, comments, files, requirements, runs, results, outputs, memory, product documents, sync state, settings, model-call log.",
+      summary: "System of record: users, cases, members, comments, files, requirements, runs, results, outputs, memory, product documents, sync state, engine versions with their acceptance and audit trail, settings, model-call log.",
       details: { "Connectivity": "private IP only (Private Services Access), TLS required", "Tier": "db-custom-1-3840 (ZONAL)", "Migrations": "Alembic, run by the init job" }
     },
     queue: {
@@ -298,7 +298,7 @@ const ARCHITECTURE_DATA = {
     },
     gcs: {
       name: "Cloud Storage bucket", category: "Data", icon: "gcs",
-      summary: "Customer files and page images, the documentation corpus (one file per page with metadata), generated outputs, product documents, price lists, index snapshots and backup packages (backups/, the ten newest).",
+      summary: "Customer files and page images, the documentation corpus (one file per page with metadata), generated outputs, product documents, price lists, index snapshots, engine module bundles (engines/) and backup packages (backups/, the ten newest).",
       details: { "Name": "<project>-rfx-atlas", "Access": "uniform, public access prevented", "Versioning": "on (5 archived versions kept)" }
     },
     secrets: {
@@ -400,7 +400,7 @@ const ARCHITECTURE_DATA = {
       description: "Incremental, scheduled mirroring of official documentation into the corpus and a new index snapshot.",
       steps: [
         { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart; a sync pod claims it.", nodes: ["queue", "sync"] },
-        { title: "Fetch politely", text: "GET only, robots.txt, ~1 request/s, identifying User-Agent, via Cloud NAT. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
+        { title: "Fetch politely", text: "The source's engine module lists and extracts; every request goes through the platform transport: GET only, robots.txt, declared hosts, ~1 request/s, identifying User-Agent, via Cloud NAT. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
         { title: "Corpus", text: "Each page is stored with its product and tier; sync state is recorded per document.", nodes: ["sync", "gcs", "sql"] },
         { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25, applying current product routing and hardware tags, and publishes a snapshot.", nodes: ["queue", "worker", "gcs"] },
         { title: "Hot swap", text: "API and worker load the new snapshot within 60 s; no restart.", nodes: ["gcs", "index-cache", "api"] }
@@ -475,6 +475,18 @@ const ARCHITECTURE_DATA = {
         { title: "Same prompt", text: "The evaluation runs again; the worker sends a prompt identical to one the gateway has answered.", nodes: ["worker", "ai-gateway"] },
         { title: "Cache hit", text: "The gateway answers from its cache (x-portkey-cache-status: HIT) in a fraction of a second; no model on Vertex AI is called.", nodes: ["ai-gateway"] },
         { title: "Not billed", text: "The platform records the call as answered from the cache: left out of the cost, counted on the dashboard as what the cache saved.", nodes: ["ai-gateway", "worker", "sql", "browser"] }
+      ]
+    },
+    {
+      id: "flow-engines", name: "14. Engine version: upload, acceptance, switch", color: "#F97316",
+      description: "A new version of a documentation engine goes from an uploaded package to a source, with an administrator's acceptance, a dry run and one-click rollback.",
+      steps: [
+        { title: "Upload", text: "An administrator uploads a .rfxmod package in Knowledge → Engines. The API stores it in the bucket by digest; versions are immutable.", nodes: ["browser", "api", "gcs"] },
+        { title: "Automated checks", text: "engine.verify runs in the sync workload: digests, manifest, reproducible wheel, locked dependencies, no own network client, the module's tests and the conformance suite on its recorded fixtures — offline. The report is stored with the version.", nodes: ["queue", "sync", "gcs", "sql"] },
+        { title: "Acceptance", text: "The administrator reviews the report, README, RECON and CHANGELOG and accepts the version with a statement of responsibility; who, when, digest and supplier are recorded. No publisher keys.", nodes: ["browser", "api", "sql"] },
+        { title: "Dry run", text: "engine.dry_run runs the candidate on the source with a page cap and compares it in memory with the stored state: listed and skipped counts, doc_id overlap, pages that would change. Nothing in the corpus changes.", nodes: ["queue", "sync", "nat", "sql"] },
+        { title: "Activate or roll back", text: "Activation binds the version from the next sync; rollback restores the previous one. Every change is audited.", nodes: ["browser", "api", "sql"] },
+        { title: "Automatic fallback", text: "If the uploaded version fails during a sync (crash, hang, unloadable bundle), the built-in version of the engine with the same doc_id scheme finishes the same run. The job reports the fallback, the source shows it until the next engine change, and the history records it; the binding stays for the administrator to decide.", nodes: ["sync", "queue", "sql", "browser"] }
       ]
     }
   ],
