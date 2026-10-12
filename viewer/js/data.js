@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-12d"
+    lastReviewed: "2026-10-12e"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -50,7 +50,7 @@ const ARCHITECTURE_DATA = {
     { id: "src-techdocs", x: 1012, y: 78, w: 168, h: 46, icon: "docs", title: "techdocs", sub: "docs.paloaltonetworks.com" },
     { id: "src-gitbook", x: 1186, y: 78, w: 168, h: 46, icon: "gitbook", title: "Cortex GitBook", sub: "Cortex / Cortex Cloud" },
     { id: "src-pandev", x: 1360, y: 78, w: 168, h: 46, icon: "docs", title: "pan.dev · Mintlify", sub: "pan.dev · Portkey · XCOR" },
-    { id: "src-idira", x: 1534, y: 78, w: 168, h: 46, icon: "lock", title: "Idira docs", sub: "off · approval recorded" },
+    { id: "src-idira", x: 1534, y: 78, w: 168, h: 46, icon: "lock", title: "Idira docs", sub: "vendor module · off" },
     { id: "src-github", x: 1012, y: 132, w: 168, h: 46, icon: "github", title: "GitHub (P2)", sub: "PANW · cyberark" },
     { id: "src-koi", x: 1186, y: 132, w: 168, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
     { id: "src-www", x: 1360, y: 132, w: 342, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet catalogue · authorised PDFs" },
@@ -190,8 +190,8 @@ const ARCHITECTURE_DATA = {
     },
     "src-idira": {
       name: "Idira documentation (formerly CyberArk)", category: "Documentation source · P1 (off, approval required)", icon: "lock",
-      summary: "Identity security documentation. Off by default: an administrator switches it on only with the basis of the site owner's approval, recorded with who and when. The site refused automated clients when the source was built; the sync then fails with access denied and does not try to get around it — access comes from the site owner allowing the platform's client.",
-      details: { "Discovery": "site sitemap when published, else a bounded crawl from the portal page (current version, English)", "Rate": "at most 0.5 requests/s, identifying User-Agent, robots.txt honoured", "Failure state": "blocked, source.access_denied", "Incomplete crawl": "never treated as deletions", "Schedule": "weekly (Sunday 04:15)" }
+      summary: "Identity security documentation, fetched through a vendor module shipped by CyberArk engineering (installed in the sync image only, pinned by version). The module identifies itself honestly and does not emulate a browser. Off by default: an administrator switches it on with the basis of the site owner's approval (recorded with who and when) and writes the module's credentials through a write-only endpoint. A refused session or an empty listing fails loudly with access denied; nothing is worked around.",
+      details: { "Network layer": "vendor module 1.0.1, honest User-Agent, sitemap or portal listing (current version, English)", "Credentials": "five Secret Manager secrets created by Terraform; the API writes versions, only sync reads", "Rate": "at most 0.5 requests/s", "Failure state": "blocked, source.access_denied (also on an empty listing)", "Deletions": "never on a failed or empty listing", "Schedule": "weekly (Sunday 04:15)" }
     },
     "src-github": {
       name: "GitHub — PaloAltoNetworks and cyberark", category: "Documentation source · P2", icon: "github",
@@ -251,7 +251,7 @@ const ARCHITECTURE_DATA = {
     sync: {
       name: "sync", category: "Workload", icon: "sync",
       summary: "Documentation synchronisation only. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
-      details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod" }
+      details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi and Idira module secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod" }
     },
     "k8s-secrets": {
       name: "Kubernetes Secrets", category: "Kubernetes", icon: "key",
@@ -582,9 +582,9 @@ const ARCHITECTURE_DATA = {
       description: "The source is approved and switched on, but the site still answers automated clients with a 'Page not found' page.",
       steps: [
         { phase: "Approval", status: "action", message: "An administrator switches the source on, entering the basis of the site owner's approval; it is recorded with their name and the time.", affectedNodes: ["browser", "api", "sql"] },
-        { phase: "Probe", status: "failure", message: "The weekly sync probes the portal page first and gets the 'Page not found' answer.", affectedNodes: ["sync", "nat", "src-idira"] },
+        { phase: "Probe", status: "failure", message: "The weekly sync asks the vendor module for pages; the site refuses the client or answers 'Page not found' everywhere, so the listing is empty.", affectedNodes: ["sync", "nat", "src-idira"] },
         { phase: "Reported", status: "action", message: "The job fails with source.access_denied and the source shows blocked; no browser emulation, borrowed cookies or other identity is tried. Other sources are unaffected.", affectedNodes: ["sync", "sql"] },
-        { phase: "Allowed", status: "restored", message: "Once the site owner allows the platform's User-Agent or outbound address, the next sync crawls at most 0.5 requests/s and the index is rebuilt.", affectedNodes: ["sync", "src-idira", "gcs"] }
+        { phase: "Allowed", status: "restored", message: "Once the site owner issues credentials (written through the write-only endpoint) or allows the platform's User-Agent or outbound address, the next sync lists and fetches at most 0.5 requests/s and the index is rebuilt.", affectedNodes: ["sync", "src-idira", "gcs"] }
       ]
     }
   ],
