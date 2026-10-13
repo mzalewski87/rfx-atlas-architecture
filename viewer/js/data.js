@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-13b"
+    lastReviewed: "2026-10-13c"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -181,7 +181,7 @@ const ARCHITECTURE_DATA = {
     "src-gitbook": {
       name: "Cortex documentation (GitBook)", category: "Documentation source · P1", icon: "gitbook",
       summary: "Cortex XSIAM, XDR, XSOAR, Xpanse and Cortex Cloud documentation from the GitBook portal (Markdown source per page).",
-      details: { "Engine": "gitbook 1.0.0 (built-in module)", "Diff key": "per-space sitemap lastmod", "Schedule": "daily", "Special case": "HTTP 200 'Page Not Found' pages detected and skipped" }
+      details: { "Engine": "gitbook 1.0.1 (built-in module)", "Diff key": "per-space sitemap lastmod", "Schedule": "daily", "Special case": "HTTP 200 'Page Not Found' pages detected and skipped" }
     },
     "src-pandev": {
       name: "pan.dev, Portkey and Cortex XCOR", category: "Documentation source · P1", icon: "docs",
@@ -201,7 +201,7 @@ const ARCHITECTURE_DATA = {
     "src-koi": {
       name: "Koi documentation", category: "Documentation source · P1 (authenticated)", icon: "lock",
       summary: "Requires a user account. The sync workload signs in with a headless browser using credentials an administrator entered (write-only). Multi-factor or CAPTCHA steps are never bypassed — a session cookie can be supplied instead.",
-      details: { "Engine": "gitbook 1.0.0 with the session the platform holds (the module never sees credentials)", "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
+      details: { "Engine": "gitbook 1.0.1 with the session the platform holds (the module never sees credentials)", "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
     },
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
