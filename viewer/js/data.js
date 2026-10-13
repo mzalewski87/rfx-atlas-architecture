@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-13c"
+    lastReviewed: "2026-10-13d"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -191,7 +191,7 @@ const ARCHITECTURE_DATA = {
     "src-idira": {
       name: "Idira documentation (formerly CyberArk)", category: "Documentation source · P1 (off, approval required)", icon: "lock",
       summary: "Identity security documentation, fetched through a vendor module shipped by CyberArk engineering (installed in the sync image only, pinned by version). The module identifies itself honestly and does not emulate a browser. Off by default: an administrator switches it on with the basis of the site owner's approval (recorded with who and when) and writes the module's credentials through a write-only endpoint. A refused session or an empty listing fails loudly with access denied; nothing is worked around.",
-      details: { "Network layer": "vendor module 1.0.1, honest User-Agent, sitemap or portal listing (current version, English)", "Credentials": "five Secret Manager secrets created by Terraform; the API writes versions, only sync reads", "Rate": "at most 0.5 requests/s", "Failure state": "blocked, source.access_denied (also on an empty listing)", "Deletions": "never on a failed or empty listing", "Schedule": "weekly (Sunday 04:15)" }
+      details: { "Engine": "vendor adapter until an administrator activates an uploaded engine module for idira_docs in Knowledge → Engines (credentials applied by the host); the vendor adapter then finishes any run the engine fails", "Network layer": "vendor module 1.0.1, honest User-Agent, sitemap or portal listing (current version, English)", "Credentials": "five Secret Manager secrets created by Terraform; the API writes versions, only sync reads", "Rate": "at most 0.5 requests/s", "Failure state": "blocked, source.access_denied (also on an empty listing)", "Deletions": "never on a failed or empty listing", "Schedule": "weekly (Sunday 04:15)" }
     },
     "src-github": {
       name: "GitHub — PaloAltoNetworks and cyberark", category: "Documentation source · P2", icon: "github",
