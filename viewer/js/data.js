@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-13"
+    lastReviewed: "2026-10-13b"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -186,7 +186,7 @@ const ARCHITECTURE_DATA = {
     "src-pandev": {
       name: "pan.dev, Portkey and Cortex XCOR", category: "Documentation source · P1", icon: "docs",
       summary: "Developer documentation (pan.dev), AI-gateway documentation (Portkey) and Cortex XCOR documentation (formerly Chronosphere). Portkey and XCOR are Mintlify sites read as Markdown source.",
-      details: { "Engines": "docusaurus 1.0.0 (pan.dev), mintlify 1.0.0 (Portkey, XCOR) — built-in modules", "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source, daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
+      details: { "Engines": "docusaurus 1.0.0 (pan.dev), mintlify 1.0.1 (Portkey, XCOR) — built-in modules", "pan.dev diff key": "content hash (no lastmod published)", "pan.dev schedule": "daily 03:50 (Europe/Warsaw)", "Portkey": "Markdown source (pages listed on docs.portkey.ai, served from portkey.ai/docs; superseded virtual_key_old mirror skipped), daily 03:20", "XCOR": "source xcor, Markdown source, sitemap lastmod, daily 04:05" }
     },
     "src-idira": {
       name: "Idira documentation (formerly CyberArk)", category: "Documentation source · P1 (off, approval required)", icon: "lock",
