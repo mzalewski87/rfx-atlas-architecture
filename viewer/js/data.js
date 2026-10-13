@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-12h"
+    lastReviewed: "2026-10-13"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -27,7 +27,7 @@ const ARCHITECTURE_DATA = {
     { id: "zone-workstation", x: 30, y: 30, w: 940, h: 160, cls: "zone-external",
       title: "Engineer workstation", sub: "Browser · kubectl · deployment tooling · backups kept off-platform" },
     { id: "zone-sources", x: 1000, y: 30, w: 710, h: 160, cls: "zone-external",
-      title: "Public documentation sources (GET only, robots.txt respected)", sub: "Egress through Cloud NAT" },
+      title: "Public documentation sources (GET only, rate-limited, identified)", sub: "Egress through Cloud NAT" },
     { id: "zone-gcp", x: 30, y: 230, w: 1680, h: 800, cls: "zone-gcp",
       title: "Google Cloud project — region europe-west4", sub: "Terraform: deploy/terraform · no public endpoint" },
     { id: "zone-vpc", x: 50, y: 350, w: 1060, h: 660, cls: "zone-vpc",
@@ -250,7 +250,7 @@ const ARCHITECTURE_DATA = {
     },
     sync: {
       name: "sync", category: "Workload", icon: "sync",
-      summary: "Documentation synchronisation and engine jobs. Each source is read by a versioned engine module (one per documentation system) running in its own process; the platform owns the transport, so identity, robots.txt, declared hosts and rate limits are enforced by the host, not by the module. Incremental (lastmod or content hash), resumable, polite (GET only, robots.txt, rate limits). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
+      summary: "Documentation synchronisation and engine jobs. Each source is read by a versioned engine module (one per documentation system) running in its own process; the platform owns the transport, so identity, declared hosts and rate limits are enforced by the host, not by the module, and it behaves like the earlier in-process client (robots.txt not consulted, redirects followed). Incremental (lastmod or content hash), resumable, polite (GET only, rate limits, identifying User-Agent). Includes a headless browser for the authenticated Koi source only. A site that refuses the platform's client (Idira today) is reported, never worked around.",
       details: { "Replicas": "4 (four sources in parallel)", "Resources": "500m CPU / 1–2 Gi", "Service account": "rfx-atlas-sync (Vertex AI, Koi and Idira module secret read)", "After a change": "queues one index build (debounced)", "Interrupted": "stops between documents, resumes on another pod", "Job kinds": "source.sync, engine.verify, engine.dry_run", "Engines": "built-in bundles verified at image build; the built-in catalogue is published to the bucket at start for the API" }
     },
     "k8s-secrets": {
@@ -400,7 +400,7 @@ const ARCHITECTURE_DATA = {
       description: "Incremental, scheduled mirroring of official documentation into the corpus and a new index snapshot.",
       steps: [
         { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart; a sync pod claims it.", nodes: ["queue", "sync"] },
-        { title: "Fetch politely", text: "The source's engine module lists and extracts; every request goes through the platform transport: GET only, robots.txt, declared hosts, ~1 request/s, identifying User-Agent, via Cloud NAT. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
+        { title: "Fetch politely", text: "The source's engine module lists and extracts; every request goes through the platform transport: GET only, declared hosts, ~1 request/s, identifying User-Agent, via Cloud NAT; robots.txt is not consulted and redirects are followed, as with the earlier adapters. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
         { title: "Corpus", text: "Each page is stored with its product and tier; sync state is recorded per document.", nodes: ["sync", "gcs", "sql"] },
         { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25, applying current product routing and hardware tags, and publishes a snapshot.", nodes: ["queue", "worker", "gcs"] },
         { title: "Hot swap", text: "API and worker load the new snapshot within 60 s; no restart.", nodes: ["gcs", "index-cache", "api"] }
@@ -628,7 +628,7 @@ const ARCHITECTURE_DATA = {
     { title: "6. Models and data residency", focus: "claude", zoom: 1.35, content: `
       <p>Gemini OCR runs in europe-west4. Claude runs on the Vertex AI <strong>global</strong> endpoint until EU quota is granted — requests may be processed outside the EU. A case flagged <strong>EU data residency</strong> switches automatically: every task whose model runs outside the EU uses Gemini 2.5 in europe-west4 instead. Routing is a setting: a discovery job checks which models answer in which region, and a route change needs no release.</p>` },
     { title: "7. Official knowledge, politely", focus: "zone-sources", zoom: 1.1, content: `
-      <p>Documentation is mirrored incrementally: GET only, robots.txt honoured, rate-limited, identifying User-Agent. Each source is read by a versioned engine module (one per documentation system) in its own process; the platform owns the transport, so these rules hold for every engine, including ones uploaded by external teams — accepted by an administrator, tried in a dry run, rolled back in one click, with the built-in version finishing any run an uploaded one fails. Every source syncs nightly from 03:00; datasheet pages feed a catalogue checked daily, with new datasheets flagged for review; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
+      <p>Documentation is mirrored incrementally: GET only, rate-limited, identifying User-Agent. Each source is read by a versioned engine module (one per documentation system) in its own process; the platform owns the transport, so these rules hold for every engine, including ones uploaded by external teams — accepted by an administrator, tried in a dry run, rolled back in one click, with the built-in version finishing any run an uploaded one fails. Every source syncs nightly from 03:00; datasheet pages feed a catalogue checked daily, with new datasheets flagged for review; the PDFs, which robots.txt asks automated clients to skip, arrive by an administrator-authorised download (site owner's approval recorded) or by manual upload, both through the same edition check.</p>` },
     { title: "8. Built to recover", focus: "queue", zoom: 1.2, content: `
       <p>Deploys hand running jobs over gracefully; lost workers are detected by heartbeats; evaluations and syncs resume where they stopped; one failed model call never sinks a run. See the Failure Simulator tab.</p>` },
     { title: "9. Reproducible deployment", focus: "tooling", zoom: 1.35, content: `
