@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-14"
+    lastReviewed: "2026-10-14b"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -206,7 +206,7 @@ const ARCHITECTURE_DATA = {
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
       summary: "A daily job (05:00) reads the sitemap and the datasheet pages (allowed by robots.txt) into a catalogue: title, edition date, PDF address. The PDFs sit under /content/dam/, which robots.txt asks automated clients to skip; with the site owner's approval for internal use, an administrator can switch on an authorised download that records the basis of that approval. Otherwise administrators upload the PDFs by hand. Either way each file passes the same edition check (older refused, identical skipped, newer replaces).",
-      details: { "Catalogue": "daily 05:00, incremental by sitemap lastmod, 1 request/s", "New datasheets": "first seen after the last review and not loaded yet: administrators get a notice until each is loaded or marked reviewed", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files", "Other sources": "robots.txt honoured for every other automated fetch" }
+      details: { "Catalogue": "daily 05:00, incremental by sitemap lastmod, 1 request/s", "New datasheets": "first seen after the last review and not loaded yet: administrators get a notice until each is loaded or marked reviewed", "Authorised download": "off by default; admin switch records approval, who and when; datasheet PDFs only, identified, 3 s between files; entries an administrator marks Do not update are skipped (an explicit fetch still loads them)", "Other sources": "robots.txt honoured for every other automated fetch" }
     },
     "control-plane": {
       name: "GKE control plane", category: "Kubernetes", icon: "control",
@@ -399,7 +399,7 @@ const ARCHITECTURE_DATA = {
       id: "flow-sync", name: "6. Documentation sync and index build", color: "#22C55E",
       description: "Incremental, scheduled mirroring of official documentation into the corpus and a new index snapshot.",
       steps: [
-        { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart; a sync pod claims it.", nodes: ["queue", "sync"] },
+        { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart, unless an administrator set another schedule or manual only in Knowledge; a sync pod claims it.", nodes: ["queue", "sync"] },
         { title: "Fetch politely", text: "The source's engine module lists and extracts; every request goes through the platform transport: GET only, declared hosts, ~1 request/s, identifying User-Agent, via Cloud NAT; robots.txt is not consulted and redirects are followed, as with the earlier adapters. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
         { title: "Corpus", text: "Each page is stored with its product and tier; sync state is recorded per document.", nodes: ["sync", "gcs", "sql"] },
         { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25, applying current product routing and hardware tags, and publishes a snapshot.", nodes: ["queue", "worker", "gcs"] },
