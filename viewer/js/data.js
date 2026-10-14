@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-13d"
+    lastReviewed: "2026-10-14"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -486,7 +486,8 @@ const ARCHITECTURE_DATA = {
         { title: "Acceptance", text: "The administrator reviews the report, README, RECON and CHANGELOG and accepts the version with a statement of responsibility; who, when, digest and supplier are recorded. No publisher keys.", nodes: ["browser", "api", "sql"] },
         { title: "Dry run", text: "engine.dry_run runs the candidate on the source with a page cap and compares it in memory with the stored state: listed and skipped counts, doc_id overlap, pages that would change. Nothing in the corpus changes.", nodes: ["queue", "sync", "nat", "sql"] },
         { title: "Activate or roll back", text: "Activation binds the version from the next sync; rollback restores the previous one. Every change is audited.", nodes: ["browser", "api", "sql"] },
-        { title: "Automatic fallback", text: "If the uploaded version fails during a sync (crash, hang, unloadable bundle), the built-in version of the engine with the same doc_id scheme finishes the same run. The job reports the fallback, the source shows it until the next engine change, and the history records it; the binding stays for the administrator to decide.", nodes: ["sync", "queue", "sql", "browser"] }
+        { title: "Automatic fallback", text: "If the uploaded version fails during a sync (crash, hang, unloadable bundle), the built-in version of the engine with the same doc_id scheme finishes the same run. The job reports the fallback, the source shows it until the next engine change, and the history records it; the binding stays for the administrator to decide.", nodes: ["sync", "queue", "sql", "browser"] },
+        { title: "Delete and re-upload", text: "An administrator can delete an uploaded version bound to no source (and not being verified or dry-run): the API removes its row and its package from the bucket, the audit keeps the digest and reason, and a corrected package can be uploaded under the same version — it starts over at the automated checks and acceptance. Built-in versions cannot be deleted.", nodes: ["browser", "api", "sql", "gcs"] }
       ]
     }
   ],
