@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-14b"
+    lastReviewed: "2026-10-14c"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -53,7 +53,8 @@ const ARCHITECTURE_DATA = {
     { id: "src-idira", x: 1534, y: 78, w: 168, h: 46, icon: "lock", title: "Idira docs", sub: "vendor module · off" },
     { id: "src-github", x: 1012, y: 132, w: 168, h: 46, icon: "github", title: "GitHub (P2)", sub: "PANW · cyberark" },
     { id: "src-koi", x: 1186, y: 132, w: 168, h: 46, icon: "lock", title: "Koi docs", sub: "authenticated (headless)" },
-    { id: "src-www", x: 1360, y: 132, w: 342, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheet catalogue · authorised PDFs" },
+    { id: "src-www", x: 1360, y: 132, w: 168, h: 46, icon: "docs", title: "paloaltonetworks.com", sub: "datasheets · authorised PDFs" },
+    { id: "src-community", x: 1534, y: 132, w: 168, h: 46, icon: "docs", title: "LIVEcommunity (P3)", sub: "escalation only" },
 
     { id: "control-plane", x: 60, y: 272, w: 300, h: 56, icon: "control", title: "GKE control plane", sub: "DNS endpoint · IAM-authorised" },
     { id: "iam-user", x: 380, y: 272, w: 260, h: 56, icon: "iam", title: "Cloud IAM", sub: "user roles gate kubectl & secrets" },
@@ -117,6 +118,7 @@ const ARCHITECTURE_DATA = {
     { from: "nat", to: "src-techdocs", cls: "egress" },
     { from: "nat", to: "src-koi", cls: "egress" },
     { from: "nat", to: "src-idira", cls: "egress" },
+    { from: "nat", to: "src-community", cls: "egress" },
     { from: "tooling", to: "control-plane", cls: "deploy" },
     { from: "tooling", to: "registry", cls: "deploy" },
     { from: "registry", to: "worker", cls: "deploy" },
@@ -202,6 +204,11 @@ const ARCHITECTURE_DATA = {
       name: "Koi documentation", category: "Documentation source · P1 (authenticated)", icon: "lock",
       summary: "Requires a user account. The sync workload signs in with a headless browser using credentials an administrator entered (write-only). Multi-factor or CAPTCHA steps are never bypassed — a session cookie can be supplied instead.",
       details: { "Engine": "gitbook 1.0.1 with the session the platform holds (the module never sees credentials)", "Credentials": "Secret Manager rfx-atlas-koi-credentials / -session", "Failure state": "auth_required with reason", "Schedule": "daily" }
+    },
+    "src-community": {
+      name: "LIVEcommunity — Palo Alto Networks community", category: "Documentation source · P3", icon: "docs",
+      summary: "Knowledge-base articles and blogs of single-product boards, read by an uploaded engine module (khoros). Kept in a separate index of the snapshot and searched only as the last step of the evidence path — when P0 (reference specifications, confirmed memory), P1 documentation and P2 GitHub cover less than 30% of a requirement. A verdict resting on it alone stays Needs verification.",
+      details: { "Engine": "khoros 1.0.0 (uploaded, accepted by an administrator)", "Tier": "P3", "Routing": "by board: 27 single-product knowledge-base and blog boards; discussions and multi-product boards never fetched", "Index": "separate P3 index in the same snapshot; never mixed into the main ranking" }
     },
     "src-www": {
       name: "paloaltonetworks.com datasheets", category: "Catalogue + authorised download", icon: "docs",
@@ -365,10 +372,10 @@ const ARCHITECTURE_DATA = {
       steps: [
         { title: "Knowledge state", text: "Before the judge or any evaluation the UI shows the index date and an estimated refresh time. Refreshing queues the chosen syncs; the analysis job defers itself in the queue (not_before) until the syncs and the index build finish, then loads the new index. Or the user proceeds with the current state.", nodes: ["browser", "api", "queue", "sync", "index-cache"] },
         { title: "Judge", text: "A fit profile from retrieval plus Claude's justified recommendation: which products cover which requirements — on Sonnet, or on Opus 5.5 when the engineer ticks the stronger model. The engineer confirms the offer scope.", nodes: ["worker", "index-cache", "claude"] },
-        { title: "Retrieve", text: "For each requirement: confirmed memory (tier M), in-scope passages with the best ones of every offered component (products an offered licence includes count as offered, e.g. XDR within XSIAM), labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets.", nodes: ["worker", "index-cache", "sql"] },
+        { title: "Retrieve", text: "The evidence path P0 > P1 > P2 > P3. For each requirement: confirmed memory and reference specifications (P0), in-scope passages with the best ones of every offered component (products an offered licence includes count as offered, e.g. XDR within XSIAM), labelled out-of-offer passages; a named hardware model (e.g. PA-5430) pulls its family's Hardware Reference and datasheets. Ordered P0, P1, P2. Only when they cover less than 30% of the requirement are up to three LIVEcommunity (P3) passages added from the separate P3 index, and the result says so.", nodes: ["worker", "index-cache", "sql"] },
         { title: "Grade", text: "Claude Sonnet 5.5 names the offered components the requirement is about and grades only against them, reading an item such as \"R190 (a)\" within its clause (source block, parent, lead-in, sibling items); it returns verdict, justification, cited snippets and verbatim decisive phrases (validated server-side). Vendor support and services requirements are graded against support, services and Unit 42 datasheets, licensing requirements against the uploaded licensing guides (internal — never linked in customer documents); only obligations of the supplier on the ground (on-site engineers, local helpdesk, logistics) are partner clauses, not graded.", nodes: ["worker", "claude"] },
         { title: "Escalate", text: "Uncertain verdicts (partial, needs verification, low confidence) are re-graded by Claude Opus 5.5. PARTIAL answers are split into what is met and what is not; NEEDS VERIFICATION into what is certain and what must be verified.", nodes: ["worker", "claude"] },
-        { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage.", nodes: ["worker", "sql"] },
+        { title: "Policy layer", text: "Deterministic rules only weaken: no citation, community-only sources, product outside the offer, low term coverage (community passages never count toward it).", nodes: ["worker", "sql"] },
         { title: "Hardware sizing", text: "Hardware requirements become measurable constraints from the tender's original wording, matched in code against the per-model figures read from the loaded datasheets (decryption throughput approximated by Threat Prevention). Quantities come from the case documents — a mandatory HA requirement means at least a pair — and capacities scale across units; only sites the order covers are priced and only models still sold are proposed — each is checked against the active price list, and one without an orderable device SKU is marked and never recommended; Claude advises a model and quantity with reasons. Virtual appliances are sized whenever the documents require them: VM-Series / CN-Series in vCPUs and Software NGFW credits, Prisma SD-WAN virtual ION by role and vCPUs (PAN-VION SKU); ION SD-WAN throughput is compared through the published IPsec figure. A changed quantity is an override with its author.", nodes: ["worker", "claude", "sql"] },
         { title: "Translate", text: "In a Polish case, a case.translate job translates justifications and the judge's rationale and reasons, and stores them beside the English originals; cited evidence is never translated. The UI can switch back to the original.", nodes: ["worker", "claude", "sql"] },
         { title: "Engineer knowledge", text: "An override needs the engineer's written justification (links optional). By default it becomes a global, authored memory entry for the chosen products — Polish is translated to English by the worker. It is used in grading only after a second engineer confirms it (four eyes, attested, with history; confirmations can be withdrawn).", nodes: ["browser", "api", "sql", "worker"] },
@@ -402,7 +409,7 @@ const ARCHITECTURE_DATA = {
         { title: "Schedule", text: "The scheduler (in every worker) queues source.sync on each source's cron, evaluated in Europe/Warsaw: every source nightly from 03:00, ten minutes apart, unless an administrator set another schedule or manual only in Knowledge; a sync pod claims it.", nodes: ["queue", "sync"] },
         { title: "Fetch politely", text: "The source's engine module lists and extracts; every request goes through the platform transport: GET only, declared hosts, ~1 request/s, identifying User-Agent, via Cloud NAT; robots.txt is not consulted and redirects are followed, as with the earlier adapters. Only changed pages are fetched (lastmod or content hash).", nodes: ["sync", "nat", "src-techdocs"] },
         { title: "Corpus", text: "Each page is stored with its product and tier; sync state is recorded per document.", nodes: ["sync", "gcs", "sql"] },
-        { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25, applying current product routing and hardware tags, and publishes a snapshot.", nodes: ["queue", "worker", "gcs"] },
+        { title: "Index build", text: "A changed sync queues one debounced index.build; the worker builds BM25 for P0/P1/P2 and a separate one for P3 (LIVEcommunity), applying current product routing and hardware tags, and publishes both in one snapshot.", nodes: ["queue", "worker", "gcs"] },
         { title: "Hot swap", text: "API and worker load the new snapshot within 60 s; no restart.", nodes: ["gcs", "index-cache", "api"] }
       ]
     },
