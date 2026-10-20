@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-20"
+    lastReviewed: "2026-10-20b"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -399,7 +399,7 @@ const ARCHITECTURE_DATA = {
       steps: [
         { title: "Message", text: "POST to the chat session (general or per case; access to the case is checked). The API queues chat.turn and keeps the response open as a stream.", nodes: ["browser", "api", "queue"] },
         { title: "Tool loop", text: "worker-interactive runs Claude (Gemini function calling for EU-resident cases) with tools: search_knowledge (hardware-aware), case_overview, requirement_verdict, list_requirements (bulk), web_search (Gemini with Google Search grounding, unofficial; off for EU-resident and anonymised cases), propose_memory, propose_override, generate_report (a downloadable XLSX/PDF — the conversation or a model-composed report) — up to 20 steps, then an answer from what was gathered. Files the engineer attached to the conversation (extracted at upload) are given to the model as context.", nodes: ["worker-interactive", "claude", "gemini", "index-cache", "sql"] },
-        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval; a generated report appears as a download. A case conversation inherits the case's residency and redaction; a general one does not.", nodes: ["worker-interactive", "queue", "api", "browser"] }
+        { title: "Stream", text: "Tool calls, results and the Markdown answer with documentation links stream back; proposals wait for the engineer's approval (a verdict change shows from and to, written in the case's result language); a long turn keeps streaming and the interface waits for its stored answer instead of timing out; a generated report appears as a download. A case conversation inherits the case's residency and redaction; a general one does not.", nodes: ["worker-interactive", "queue", "api", "browser"] }
       ]
     },
     {
@@ -451,7 +451,7 @@ const ARCHITECTURE_DATA = {
       steps: [
         { title: "Big picture", text: "Before the judge, the worker reads every document row into the tender's big picture (organisation, sites and links, users, whether sites need equipment); each kind of site carries its order scope (in the order, outside it, optional) and placement; the judge fits the whole deployment and sizing turns in-scope sites into device groups — sites outside the order or only forecast are shown but not priced until an engineer includes them, and a public cloud takes no appliance.", nodes: ["worker", "claude", "sql"] },
         { title: "Questions to the customer", text: "For requirements that are unclear or not met as written, the worker writes one question each, phrased so that 'yes' means compliance; they leave as a signed-off XLSX.", nodes: ["browser", "api", "queue", "worker", "claude", "gcs"] },
-        { title: "Answers and re-grading", text: "The customer's filled questionnaire is imported; the answered requirements are graded again with the answer as context. Answers never become knowledge.", nodes: ["browser", "api", "worker", "sql"] },
+        { title: "Answers and re-grading", text: "The customer's filled questionnaire is imported — or any document of the customer's answers to bidders' questions (ours and others'; letter, PDF, a signed scan read through OCR): clarify.answers reads it into question-and-answer pairs and links each to the requirements it concerns (cited points, content, our questions; confirmed by the model, correctable). Linked requirements are graded again with the answers as context; an answer that changes a requirement counts as its new wording. Answers never become knowledge.", nodes: ["browser", "api", "queue", "worker", "gemini", "claude", "gcs", "sql"] },
         { title: "Business status", text: "An owner moves the case to awaiting customer reply, final answer sent, won, lost or archived — always with a comment, kept as history.", nodes: ["browser", "api", "sql"] },
         { title: "Dashboard", text: "Cases by status and step, users online (session activity in the last 5 minutes) and the live load of each worker pool, refreshed every 10 seconds; model tokens and cost month to date, per case and per model, from the logged calls and a dated price table.", nodes: ["browser", "api", "sql", "queue"] }
       ]
