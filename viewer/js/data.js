@@ -386,7 +386,7 @@ const ARCHITECTURE_DATA = {
     },
     {
       id: "flow-outputs", name: "4. Outputs and write-back", color: "#A855F7",
-      description: "Compliance matrix, summary, BOM, or the answers written into the customer's own file.",
+      description: "Compliance matrix, summary, BOM, or the answers written into the customer's own file — a clause split into parts for grading is answered there as a whole, with one verdict by its own and/or logic.",
       steps: [
         { title: "Confirm and request", text: "The engineer confirms having reviewed every requirement and the assessment; they become the document's owner. Read-only members download existing documents but generate none. The API queues output.render.", nodes: ["browser", "api", "queue"] },
         { title: "Render", text: "worker-interactive reads the run and, for write-back, the original file; XLSX/DOCX are filled in a copy (with Engineer notes and Documentation columns), PDF annotated; stored translations are reused. The executive summary is client-ready — logo, statistics, blockers, proposed hardware — and closes with the owner's sign-off stamp.", nodes: ["worker-interactive", "sql", "gcs"] },
