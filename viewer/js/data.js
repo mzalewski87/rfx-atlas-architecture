@@ -17,7 +17,7 @@ const ARCHITECTURE_DATA = {
     subtitle: "Interactive Architecture Viewer & Resilience Simulator",
     badge: "GKE · Vertex AI",
     repoUrl: "https://github.com/mzalewski87/rfx-atlas-architecture",
-    lastReviewed: "2026-10-21c"
+    lastReviewed: "2026-10-21e"
   },
 
   canvas: { width: 1740, height: 1060 },
@@ -277,7 +277,7 @@ const ARCHITECTURE_DATA = {
     },
     sql: {
       name: "Cloud SQL — PostgreSQL 16", category: "Data", icon: "sql",
-      summary: "System of record: users, cases, members, comments, files, requirements, runs, results, outputs, memory, product documents, sync state, engine versions with their acceptance and audit trail, settings, model-call log; per case the tender analysis (award criteria, clause structure, related requirements) and one embedding vector per requirement row, compared only within that case.",
+      summary: "System of record: users, cases, members, comments, files, requirements, runs, results, outputs, memory, product documents, sync state, engine versions with their acceptance and audit trail, settings, model-call log; per case the tender analysis (award criteria, clause structure, related requirements), the tender timeline and one embedding vector per requirement row, compared only within that case.",
       details: { "Connectivity": "private IP only (Private Services Access), TLS required", "Tier": "db-custom-1-3840 (ZONAL)", "Migrations": "Alembic, run by the init job" }
     },
     queue: {
@@ -363,6 +363,7 @@ const ARCHITECTURE_DATA = {
         { title: "Anonymisation review", text: "For a case created with the anonymisation review (a setting fixed at creation, like the languages and EU residency), a local scan — no model — proposes people, organisations, contact data, addresses and checksum-validated identifiers. The anonymisation review also forces EU data residency. Processing waits until the engineer ticks what to redact; from then on every model call of the case masks those terms and stays in europe-west4.", nodes: ["worker", "sql", "browser"] },
         { title: "Classify the file", text: "worker-interactive tags each file with its content (offer description, functional / organisational / legal / additional requirements, other). A file with nothing technical only gets a suggestion to exclude its requirements — the engineer decides. Every format can be previewed.", nodes: ["worker-interactive", "claude", "sql"] },
         { title: "Redact, then segment", text: "Redaction terms are masked, then Claude splits blocks into atomic requirements with English working text; block references keep the anchors. EU-resident cases use Gemini in europe-west4 instead.", nodes: ["worker", "claude", "gemini"] },
+        { title: "Timeline", text: "After ingest and after each answer letter the worker reads every date and term of the tender (case.timeline): stated dates, relative terms (\"within 30 days of signing\"), and deadlines the contracting authority's letters move (history kept). Code then builds the timeline on the country's calendar: when the case uses its country's procurement law, its statutory terms fill what the documents leave out (with article and quote) — laws are added per country (file or official link), read into rules whose quotes are checked against the text, and used only after two other engineers confirm them; the Polish law is built in — and the selection and contract estimated as the earliest possible; an engineer sets the regime or corrects a date with a reason. Shown as the first case tab.", nodes: ["worker", "claude", "sql", "browser"] },
         { title: "Ready", text: "Requirements are stored; case.state events refresh the case view live.", nodes: ["worker", "sql", "queue", "browser"] }
       ]
     },
