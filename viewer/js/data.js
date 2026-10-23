@@ -336,7 +336,7 @@ const ARCHITECTURE_DATA = {
     claude: {
       name: "Vertex AI — Claude", category: "Models", icon: "claude",
       summary: "Segmentation, translation, judge, evaluation and the assistant for cases without the EU-residency flag. Runs on the global endpoint until EU quota is available — requests may be processed outside the EU. Routing is a setting, switchable without a release.",
-      details: { "Default": "claude-sonnet-5-5 (since 0.6.0)", "Escalation": "claude-opus-5-5 (uncertain verdicts, deep evaluation, deep judge)", "Discovery": "models.discover probes every model per region", "Logged": "every call in llm_calls (tokens, latency, case); cost per case and month from an editable price table" }
+      details: { "Default": "claude-sonnet-5-5 (since 0.6.0)", "Escalation": "claude-opus-5-5 (uncertain verdicts, deep evaluation, deep judge)", "Discovery": "models.discover probes every model per region (incl. the eu multi-region)", "EU multi-region (0.19.2)": "Opus/Sonnet 5.5 answer on eu with EU processing; an option for EU-resident cases, off — measured below the Gemini fallback on one case", "Logged": "every call in llm_calls (tokens, latency, case); cost per case and month from an editable price table" }
     }
   },
 
